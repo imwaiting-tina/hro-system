@@ -110,13 +110,13 @@ const EvaluationTab: React.FC<{ user: any }> = ({ user }) => {
       width: 200,
       render: (_: any, record: any) => (
         <Space size="small">
-          {record.status === 'pending_bu' && canApprove(user.role) && (
+          {record.status === 'pending_bu' && user && canApprove(user.role) && (
             <Button size="small" type="primary" onClick={() => handleApprove(record.id, 'bu')}>BU审批</Button>
           )}
-          {record.status === 'pending_hr' && canApprove(user.role) && (
+          {record.status === 'pending_hr' && user && canApprove(user.role) && (
             <Button size="small" type="primary" onClick={() => handleApprove(record.id, 'hr')}>HR审批</Button>
           )}
-          {record.status === 'pending_final' && user.role === 'super_admin' && (
+          {record.status === 'pending_final' && user && user.role === 'super_admin' && (
             <Button size="small" type="primary" onClick={() => handleApprove(record.id, 'final')}>终审通过</Button>
           )}
         </Space>
@@ -128,7 +128,7 @@ const EvaluationTab: React.FC<{ user: any }> = ({ user }) => {
     <Card>
       <div className="table-toolbar">
         <Text strong>共 {data.length} 条评估记录</Text>
-        {canEdit(user.role) && (
+        {user && canEdit(user.role) && (
           <Button type="primary" icon={<PlusOutlined />} onClick={() => { form.resetFields(); setModalVisible(true); }}>
             新建评估
           </Button>
@@ -214,16 +214,16 @@ const RenewalTab: React.FC<{ user: any }> = ({ user }) => {
       width: 200,
       render: (_: any, record: any) => (
         <Space size="small">
-          {record.status === 'pending_bu' && canApprove(user.role) && (
+          {record.status === 'pending_bu' && user && canApprove(user.role) && (
             <Button size="small" type="primary" onClick={() => handleApprove(record.id, 'bu')}>BU审批</Button>
           )}
-          {record.status === 'pending_hr' && canApprove(user.role) && (
+          {record.status === 'pending_hr' && user && canApprove(user.role) && (
             <Button size="small" type="primary" onClick={() => handleApprove(record.id, 'hr')}>HR审批</Button>
           )}
-          {record.status === 'pending_final' && user.role === 'super_admin' && (
+          {record.status === 'pending_final' && user && user.role === 'super_admin' && (
             <Button size="small" type="primary" onClick={() => handleApprove(record.id, 'final')}>终审通过</Button>
           )}
-          {record.status === 'approved' && canEdit(user.role) && (
+          {record.status === 'approved' && user && canEdit(user.role) && (
             <Button size="small" onClick={() => handleApprove(record.id, 'completed')}>完成</Button>
           )}
         </Space>
@@ -235,7 +235,7 @@ const RenewalTab: React.FC<{ user: any }> = ({ user }) => {
     <Card>
       <div className="table-toolbar">
         <Text strong>共 {data.length} 条续签记录</Text>
-        {canEdit(user.role) && (
+        {user && canEdit(user.role) && (
           <Button type="primary" icon={<PlusOutlined />} onClick={async () => {
             // 简单新增
             await supabase.from('contract_renewals').insert({
@@ -294,7 +294,7 @@ const TransferTab: React.FC<{ user: any }> = ({ user }) => {
       width: 150,
       render: (_: any, record: any) => (
         <Space size="small">
-          {record.status === 'pending' && canApprove(user.role) && (
+          {record.status === 'pending' && user && canApprove(user.role) && (
             <Button size="small" type="primary" onClick={async () => {
               await supabase.from('employee_transfers').update({ status: 'completed' }).eq('id', record.id);
               message.success('已确认');
@@ -310,7 +310,7 @@ const TransferTab: React.FC<{ user: any }> = ({ user }) => {
     <Card>
       <div className="table-toolbar">
         <Text strong>共 {data.length} 条流动记录</Text>
-        {canEdit(user.role) && (
+        {user && canEdit(user.role) && (
           <Button type="primary" icon={<PlusOutlined />} onClick={async () => {
             await supabase.from('employee_transfers').insert({
               employee_id: 'new',
@@ -379,7 +379,7 @@ const EmployeeListTab: React.FC<{ user: any }> = ({ user }) => {
     <Card>
       <div className="table-toolbar">
         <Text strong>共 {data.length} 名员工</Text>
-        {canEdit(user.role) && (
+        {user && canEdit(user.role) && (
           <Button type="primary" icon={<PlusOutlined />}>新增员工</Button>
         )}
       </div>

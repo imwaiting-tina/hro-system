@@ -95,16 +95,16 @@ const ResignationPage: React.FC = () => {
             onClick={() => { setSelectedRecord(record); setDetailVisible(true); }}>
             详情
           </Button>
-          {record.status === 'pending' && canApprove(user.role) && (
+          {record.status === 'pending' && user && canApprove(user.role) && (
             <>
               <Button size="small" onClick={() => handleApprove(record.id, 'dept')}>部门审批</Button>
               <Button size="small" onClick={() => handleApprove(record.id, 'hr')}>HR审批</Button>
             </>
           )}
-          {record.status === 'pending' && user.role === 'super_admin' && (
+          {record.status === 'pending' && user && user.role === 'super_admin' && (
             <Button size="small" type="primary" onClick={() => handleApprove(record.id, 'final')}>终审通过</Button>
           )}
-          {record.status === 'pending_handover' && canEdit(user.role) && (
+          {record.status === 'pending_handover' && user && canEdit(user.role) && (
             <Button size="small" onClick={() => handleComplete(record.id)}>完成</Button>
           )}
         </Space>
@@ -122,7 +122,7 @@ const ResignationPage: React.FC = () => {
       <Card>
         <div className="table-toolbar">
           <Text strong>共 {data.length} 条离职记录</Text>
-          {canEdit(user.role) && (
+          {user && canEdit(user.role) && (
             <Button type="primary" icon={<PlusOutlined />} onClick={() => {
               form.resetFields();
               setModalVisible(true);

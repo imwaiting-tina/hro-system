@@ -201,7 +201,7 @@ const ApprovalList: React.FC<{ user: any; filter: string }> = ({ user, filter })
             onClick={() => { setSelectedRecord(record); setDetailVisible(true); }}>
             查看详情
           </Button>
-          {canApprove(user.role) && record.status === 'pending' && (
+          {user && canApprove(user.role) && record.status === 'pending' && (
             <>
               <Button size="small" type="primary" icon={<CheckCircleOutlined />}
                 onClick={() => handleApprove(record)}>
