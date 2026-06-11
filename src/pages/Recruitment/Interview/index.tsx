@@ -97,7 +97,7 @@ const InterviewPage: React.FC = () => {
     setLoading(false);
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchData(); }, [modalVisible]);
 
   // Tina 才能安排面试
   const canArrange = isTina;
