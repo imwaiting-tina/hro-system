@@ -83,10 +83,15 @@ const InterviewPage: React.FC = () => {
     if (userList) setUsers(userList);
     // 非Tina用户只看分配给自己的面试
     if (interviews) {
+      // 兼容旧数据：result='pending' 字符串统一视为 null（待评定）
+      const cleaned = interviews.map((iv: any) => ({
+        ...iv,
+        result: iv.result === 'pending' ? null : iv.result,
+      }));
       if (!isTina && user) {
-        setData(interviews.filter((iv: any) => iv.interviewers?.includes(user.id)));
+        setData(cleaned.filter((iv: any) => iv.interviewers?.includes(user.id)));
       } else {
-        setData(interviews);
+        setData(cleaned);
       }
     }
     setLoading(false);
@@ -97,19 +102,13 @@ const InterviewPage: React.FC = () => {
   // Tina 才能安排面试
   const canArrange = isTina;
 
-  // 终态结果（不可再填）
-  const isFinalResult = (result: string) => ['passed', 'failed', 'cancelled'].includes(result);
-
-  // 判断当前用户是否能填该面试的结果
+  // 判断当前用户是否能填该面试的结果（简化：面试官或被分配者都可填）
   const canFillResult = (interview: any) => {
-    if (!interview) return false;
-    if (isFinalResult(interview.result)) return false; // 已有终态结果
-    const decider = roundConfig[interview.round]?.resultDecider;
-    if (decider === 'tina') return isTina;
-    if (decider === 'interviewer') {
-      // 面试官是当前用户
-      return interview.interviewers?.includes(user?.id);
-    }
+    if (!interview || isFinalResult(interview.result)) return false;
+    // 当前用户是面试官之一
+    if (interview.interviewers?.includes(user?.id)) return true;
+    // Tina 可以填所有面试结果
+    if (isTina) return true;
     return false;
   };
 
@@ -387,15 +386,15 @@ const InterviewPage: React.FC = () => {
         <Space size="small">
           {canFillResult(record) && (
             <Button size="small" type="primary" icon={<BellOutlined />} onClick={() => openResult(record)}>
-              填写结果
+              {!record.result ? '填写结果' : '修改结果'}
             </Button>
           )}
-          {record.result && isFinalResult(record.result) && (
+          {isFinalResult(record.result) && (
             <Tag color={statusColor[record.result]}>
               {record.result === 'passed' ? `${roundConfig[record.round]?.label}通过` : `${roundConfig[record.round]?.label}未通过`}
             </Tag>
           )}
-          {!record.result && (
+          {!record.result && !canFillResult(record) && (
             <Tag color="processing">待评定</Tag>
           )}
         </Space>
