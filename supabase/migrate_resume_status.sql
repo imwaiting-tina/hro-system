@@ -27,23 +27,12 @@ ALTER TABLE resumes ALTER COLUMN status TYPE TEXT;
 UPDATE resumes SET status = 'interviewing_first' WHERE status = 'interviewing';
 
 -- 第4步：将列类型改为新 ENUM
-ALTER TABLE resumes ALTER COLUMN status TYPE resume_status_new
-  USING (
-    CASE status
-      WHEN 'new'             THEN 'new'::resume_status_new
-      WHEN 'screening'       THEN 'screening'::resume_status_new
-      WHEN 'interviewing'    THEN 'interviewing_first'::resume_status_new
-      WHEN 'interviewing_first'  THEN 'interviewing_first'::resume_status_new
-      WHEN 'interviewing_second' THEN 'interviewing_second'::resume_status_new
-      WHEN 'interviewing_final'  THEN 'interviewing_final'::resume_status_new
-      WHEN 'pending_offer'   THEN 'pending_offer'::resume_status_new
-      WHEN 'offered'         THEN 'offered'::resume_status_new
-      WHEN 'accepted'        THEN 'accepted'::resume_status_new
-      WHEN 'rejected'        THEN 'rejected'::resume_status_new
-      WHEN 'withdrawn'       THEN 'withdrawn'::resume_status_new
-      ELSE 'new'::resume_status_new
-    END
-  );
+-- 注意：需先删除列的 DEFAULT 约束，因为 PostgreSQL 不会自动转换默认值类型。
+-- 由于第3步已经将旧值 'interviewing' 更新为 'interviewing_first'，
+-- 当前表中所有值都已被新ENUM覆盖，可以直接做类型转换。
+ALTER TABLE resumes ALTER COLUMN status DROP DEFAULT;
+ALTER TABLE resumes ALTER COLUMN status TYPE resume_status_new USING status::resume_status_new;
+ALTER TABLE resumes ALTER COLUMN status SET DEFAULT 'new'::resume_status_new;
 
 -- 第5步：删除旧类型，重命名新类型
 DROP TYPE resume_status;
