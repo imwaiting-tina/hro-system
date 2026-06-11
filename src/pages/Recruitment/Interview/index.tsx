@@ -75,9 +75,9 @@ const InterviewPage: React.FC = () => {
     const [{ data: interviews }, { data: resumeList }, { data: userList }] = await Promise.all([
       supabase.from('interviews').select('*').order('scheduled_at', { ascending: true }),
       supabase.from('resumes').select('id,candidate_name,status').in('status', [
-        'screening', 'interviewing_first', 'interviewing_second', 'interviewing_final',
+        'new', 'screening', 'interviewing_first', 'interviewing_second', 'interviewing_final',
       ]),
-      supabase.from('users').select('id,display_name,role,department'),
+      supabase.from('users').select('id,username,display_name,role,department'),
     ]);
     if (interviews) setData(interviews);
     if (resumeList) setResumes(resumeList);
@@ -213,8 +213,8 @@ const InterviewPage: React.FC = () => {
       interviewers: values.interviewers || [],
       scheduled_at: values.scheduled_at?.toISOString(),
       location: values.location || '',
-      note: values.note || '',
-      result: null,
+      feedback: values.feedback || '',
+      result: 'pending',
     }).select('id').single();
 
     if (error) {
@@ -461,7 +461,7 @@ const InterviewPage: React.FC = () => {
           <Form.Item name="location" label="面试地点">
             <Input placeholder="线上/线下会议室" />
           </Form.Item>
-          <Form.Item name="note" label="备注">
+          <Form.Item name="feedback" label="备注">
             <TextArea rows={3} placeholder="面试注意事项" />
           </Form.Item>
         </Form>
