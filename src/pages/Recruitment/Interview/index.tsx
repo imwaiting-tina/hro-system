@@ -79,9 +79,16 @@ const InterviewPage: React.FC = () => {
       ]),
       supabase.from('users').select('id,username,display_name,role,department'),
     ]);
-    if (interviews) setData(interviews);
     if (resumeList) setResumes(resumeList);
     if (userList) setUsers(userList);
+    // 非Tina用户只看分配给自己的面试
+    if (interviews) {
+      if (!isTina && user) {
+        setData(interviews.filter((iv: any) => iv.interviewers?.includes(user.id)));
+      } else {
+        setData(interviews);
+      }
+    }
     setLoading(false);
   };
 
