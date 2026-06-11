@@ -39,8 +39,8 @@ const menuConfig = [
     roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head'] as UserRole[],
     children: [
       { key: '/recruitment/resume', icon: <FileSearchOutlined />, label: '简历库' },
-      { key: '/recruitment/interview', icon: <CalendarOutlined />, label: '面试安排' },
       { key: '/recruitment/demand', icon: <FileTextOutlined />, label: '招聘需求' },
+      { key: '/recruitment/interview', icon: <CalendarOutlined />, label: '面试安排' },
       { key: '/recruitment/offer', icon: <SendOutlined />, label: 'Offer管理' },
     ],
   },
