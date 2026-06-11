@@ -12,7 +12,7 @@ import dayjs from 'dayjs';
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
-// 面试轮次定义：key、标签、谁来决定结果、固定面试官角色
+// 面试轮次定义：key、标签、谁来决定结果、固定面试官匹配方式
 const roundConfig: Record<string, {
   label: string;
   resultDecider: 'tina' | 'interviewer';
@@ -21,7 +21,7 @@ const roundConfig: Record<string, {
   first:  {
     label: '一面',
     resultDecider: 'tina',
-    interviewerRoles: ['main_admin', 'sub_admin'],  // Tina（HR团队）
+    interviewerRoles: ['main_admin'],  // 只有Tina
   },
   second: {
     label: '二面',
@@ -104,10 +104,8 @@ const InterviewPage: React.FC = () => {
 
   // 根据候选人状态，计算可选的面试轮次
   const getAvailableRounds = (resumeStatus: string): InterviewRound[] => {
-    // 新收/筛选中 → 只能一面
-    if (resumeStatus === 'new' || resumeStatus === 'screening') return ['first'];
-    // 一面中 → 如果一面已通过则只能二面，否则可选一面（待安排场景）
-    if (resumeStatus === 'interviewing_first') return ['second'];
+    // 新收/筛选中/一面中（未安排过） → 只能一面
+    if (resumeStatus === 'new' || resumeStatus === 'screening' || resumeStatus === 'interviewing_first') return ['first'];
     if (resumeStatus === 'interviewing_second') return ['final'];
     return [];
   };
@@ -390,10 +388,10 @@ const InterviewPage: React.FC = () => {
                 .filter((r: any) => ['new', 'screening', 'interviewing_first', 'interviewing_second'].includes(r.status))
                 .map((r: any) => {
                   const statusLabel =
-                    r.status === 'new' ? '新收' :
-                    r.status === 'screening' ? '筛选中' :
-                    r.status === 'interviewing_first' ? '一面已通过→待二面' :
-                    r.status === 'interviewing_second' ? '二面已通过→待终面' : r.status;
+                    r.status === 'new' ? '新收→待一面' :
+                    r.status === 'screening' ? '筛选中→待一面' :
+                    r.status === 'interviewing_first' ? '待安排一面' :
+                    r.status === 'interviewing_second' ? '一面已通过→待终面' : r.status;
                   return {
                     label: `${r.candidate_name}（${statusLabel}）`,
                     value: r.id,

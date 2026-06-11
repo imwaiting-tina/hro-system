@@ -118,14 +118,8 @@ const ResumeLibPage: React.FC = () => {
           )}
       {record.status === 'new' && canEdit(user!.role) && (
             <Button size="small" type="primary"
-              onClick={() => handleStatusChange(record.id, 'screening')}>
-              推送筛选
-            </Button>
-          )}
-          {record.status === 'screening' && canEdit(user!.role) && (
-            <Button size="small" type="primary"
               onClick={() => handleStatusChange(record.id, 'interviewing_first')}>
-              进入一面
+              推送至一面
             </Button>
           )}
           {record.status === 'pending_offer' && canEdit(user!.role) && (
