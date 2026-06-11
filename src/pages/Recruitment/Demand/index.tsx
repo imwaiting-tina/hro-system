@@ -11,7 +11,6 @@ import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
-const { RangePicker } = DatePicker;
 
 const statusMap: Record<RecruitmentStatus, { label: string; color: string }> = {
   draft: { label: '草稿', color: 'default' },
@@ -54,10 +53,7 @@ const DemandPage: React.FC = () => {
       ...values,
       request_no: editingRecord?.request_no || `REQ-${Date.now()}`,
       created_by: editingRecord?.created_by || user?.id,
-      salary_range_min: values.salary_range?.[0],
-      salary_range_max: values.salary_range?.[1],
     };
-    delete payload.salary_range;
 
     if (editingRecord) {
       await supabase.from('recruitment_requests').update(payload).eq('id', editingRecord.id);
@@ -83,7 +79,6 @@ const DemandPage: React.FC = () => {
     setEditingRecord(record);
     form.setFieldsValue({
       ...record,
-      salary_range: record.salary_range_min ? [record.salary_range_min, record.salary_range_max] : undefined,
       expected_onboard_date: record.expected_onboard_date ? dayjs(record.expected_onboard_date) : undefined,
     });
     setModalVisible(true);
@@ -222,8 +217,11 @@ const DemandPage: React.FC = () => {
                   { label: 'M级', value: 'M' }, { label: 'S级', value: 'S' },
                 ]} />
               </Form.Item>
-              <Form.Item name="salary_range" label="薪酬范围(月/元)">
-                <RangePicker style={{ width: 260 }} />
+              <Form.Item name="salary_range_min" label="薪酬范围-最低(月/元)">
+                <InputNumber min={0} style={{ width: 180 }} prefix="¥" placeholder="最低薪资" />
+              </Form.Item>
+              <Form.Item name="salary_range_max" label="薪酬范围-最高(月/元)">
+                <InputNumber min={0} style={{ width: 180 }} prefix="¥" placeholder="最高薪资" />
               </Form.Item>
             </Space>
             <Form.Item name="annual_budget" label="年度预算">
