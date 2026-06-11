@@ -17,6 +17,7 @@ const roundConfig: Record<string, {
   label: string;
   resultDecider: 'tina' | 'interviewer';
   interviewerRoles: string[];  // 固定面试官角色
+  extraInterviewers?: string[]; // 额外面试官（按username匹配）
 }> = {
   first:  {
     label: '一面',
@@ -31,7 +32,8 @@ const roundConfig: Record<string, {
   final:  {
     label: '终面',
     resultDecider: 'interviewer',
-    interviewerRoles: ['super_admin'],  // Jenny / 高管
+    interviewerRoles: ['super_admin'],  // Jenny
+    extraInterviewers: ['huangyixiao'], // 黄一萧（按username匹配）
   },
 };
 
@@ -105,13 +107,13 @@ const InterviewPage: React.FC = () => {
   // 终态结果（不可再填）
   const isFinalResult = (result: string | null) => result && ['passed', 'failed', 'cancelled'].includes(result);
 
-  // 判断当前用户是否能填该面试的结果（简化：面试官或被分配者都可填）
+  // 判断当前用户是否能填该面试的结果
   const canFillResult = (interview: any) => {
     if (!interview || isFinalResult(interview.result)) return false;
     // 当前用户是面试官之一
     if (interview.interviewers?.includes(user?.id)) return true;
-    // Tina 可以填所有面试结果
-    if (isTina) return true;
+    // Tina 只能填一面（她是固定面试官），不能越权填二面/终面
+    if (isTina && interview.round === 'first') return true;
     return false;
   };
 
@@ -176,8 +178,14 @@ const InterviewPage: React.FC = () => {
       const tina = users.find((u: any) => u.username === 'tina');
       matched = tina ? [tina.id] : [];
     } else {
-      const roles = roundConfig[round]?.interviewerRoles || [];
+      const config = roundConfig[round];
+      const roles = config?.interviewerRoles || [];
+      // 按角色匹配
       matched = users.filter((u: any) => roles.includes(u.role)).map((u: any) => u.id);
+      // 额外面试官（按username匹配）
+      const extras = config?.extraInterviewers || [];
+      const extraIds = users.filter((u: any) => extras.includes(u.username)).map((u: any) => u.id);
+      matched = [...matched, ...extraIds];
     }
     form.setFieldsValue({ interviewers: matched });
   };
