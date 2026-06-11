@@ -102,11 +102,26 @@ const InterviewPage: React.FC = () => {
     return false;
   };
 
-  // 根据候选人状态，计算可选的面试轮次
-  const getAvailableRounds = (resumeStatus: string): InterviewRound[] => {
-    // 新收/筛选中/一面中（未安排过） → 只能一面
-    if (resumeStatus === 'new' || resumeStatus === 'screening' || resumeStatus === 'interviewing_first') return ['first'];
-    if (resumeStatus === 'interviewing_second') return ['final'];
+  // 根据候选人已有面试记录 + 简历状态，确定可安排的轮次
+  const getAvailableRounds = (resumeStatus: string, existingInterviews: any[]): InterviewRound[] => {
+    const hasPassedRound = (r: string) => existingInterviews?.some((x: any) => x.round === r && x.result === 'passed');
+    const hasPendingRound = (r: string) => existingInterviews?.some((x: any) => x.round === r && !x.result);
+    const hasAnyRound = (r: string) => existingInterviews?.some((x: any) => x.round === r);
+
+    // 有待评定的一轮 → 不能安排新面试
+    if (hasPendingRound('first') || hasPendingRound('second') || hasPendingRound('final')) {
+      return [];
+    }
+
+    // 未安排过一面 → 可安排一面
+    if (!hasAnyRound('first')) return ['first'];
+
+    // 一面已通过 + 未安排二面 → 可安排二面
+    if (hasPassedRound('first') && !hasAnyRound('second')) return ['second'];
+
+    // 二面已通过 + 未安排终面 → 可安排终面
+    if (hasPassedRound('second') && !hasAnyRound('final')) return ['final'];
+
     return [];
   };
 
@@ -115,7 +130,7 @@ const InterviewPage: React.FC = () => {
     setModalVisible(true);
   };
 
-  const handleResumeChange = (resumeId: string) => {
+  const handleResumeChange = async (resumeId: string) => {
     if (!resumeId) {
       form.setFieldsValue({ round: undefined, interviewers: undefined });
       return;
@@ -123,12 +138,20 @@ const InterviewPage: React.FC = () => {
     const resume = resumes.find((r: any) => r.id === resumeId);
     if (!resume) return;
 
-    const availableRounds = getAvailableRounds(resume.status);
+    // 查该候选人已有面试记录
+    const { data: existing } = await supabase
+      .from('interviews')
+      .select('round,result')
+      .eq('resume_id', resumeId);
+
+    const availableRounds = getAvailableRounds(resume.status, existing || []);
     if (availableRounds.length > 0) {
       const round = availableRounds[0];
       form.setFieldsValue({ round });
-      // 自动匹配该轮次的面试官
       matchInterviewers(round);
+    } else {
+      form.setFieldsValue({ round: undefined, interviewers: undefined });
+      message.warning('该候选人暂无可安排的面试轮次');
     }
   };
 
