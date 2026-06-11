@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import {
   Table, Button, Tag, Space, Modal, Form, Input, Select, InputNumber,
-  DatePicker, message, Typography, Card, Steps, Descriptions, Popconfirm
+  DatePicker, message, Typography, Card, Steps, Descriptions, Popconfirm,
 } from 'antd';
 import {
   PlusOutlined, EyeOutlined, SendOutlined, CheckCircleOutlined,
-  CloseCircleOutlined, MailOutlined
+  CloseCircleOutlined, MailOutlined, UserSwitchOutlined,
 } from '@ant-design/icons';
 import { useAuthStore, canEdit } from '../../../stores/authStore';
 import supabase from '../../../utils/supabase';
@@ -16,32 +16,35 @@ const { Title, Text } = Typography;
 const { TextArea } = Input;
 
 const statusMap: Record<OfferStatus, { label: string; color: string }> = {
-  draft: { label: '草稿', color: 'default' },
-  pending_send: { label: '待发送', color: 'processing' },
-  sent: { label: '已发送', color: 'blue' },
-  delivered: { label: '已送达', color: 'cyan' },
-  accepted: { label: '已接受', color: 'success' },
-  rejected: { label: '已拒绝', color: 'error' },
-  expired: { label: '已过期', color: 'warning' },
-  revoked: { label: '已撤回', color: 'default' },
+  draft:        { label: '草稿',     color: 'default' },
+  pending_send:  { label: '待发送',   color: 'processing' },
+  sent:         { label: '已发送',   color: 'blue' },
+  delivered:    { label: '已送达',   color: 'cyan' },
+  accepted:     { label: '已接受',   color: 'success' },
+  rejected:     { label: '已拒绝',   color: 'error' },
+  expired:      { label: '已过期',   color: 'warning' },
+  revoked:      { label: '已撤回',   color: 'default' },
 };
 
 const OfferPage: React.FC = () => {
   const user = useAuthStore((s) => s.user);
   const [data, setData] = useState<any[]>([]);
+  const [pendingResumes, setPendingResumes] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [detailVisible, setDetailVisible] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
+  const [creatingFromResume, setCreatingFromResume] = useState<any>(null);
   const [form] = Form.useForm();
 
   const fetchData = async () => {
     setLoading(true);
-    const { data: result } = await supabase
-      .from('offers')
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (result) setData(result);
+    const [{ data: offers }, { data: resumes }] = await Promise.all([
+      supabase.from('offers').select('*').order('created_at', { ascending: false }),
+      supabase.from('resumes').select('id,candidate_name').eq('status', 'pending_offer'),
+    ]);
+    if (offers) setData(offers);
+    if (resumes) setPendingResumes(resumes);
     setLoading(false);
   };
 
@@ -56,23 +59,23 @@ const OfferPage: React.FC = () => {
       created_by: user?.id,
       status: 'draft' as OfferStatus,
     };
-
     await supabase.from('offers').insert(payload);
     message.success('Offer创建成功');
     setModalVisible(false);
+    setCreatingFromResume(null);
     form.resetFields();
     fetchData();
   };
 
   const handleStatusChange = async (id: string, newStatus: OfferStatus) => {
     const updates: any = { status: newStatus };
-    if (newStatus === 'sent') updates.sent_at = new Date().toISOString();
-    if (newStatus === 'accepted' || newStatus === 'rejected') updates.replied_at = new Date().toISOString();
+    if (newStatus === 'sent')        updates.sent_at    = new Date().toISOString();
+    if (newStatus === 'accepted')    updates.replied_at = new Date().toISOString();
+    if (newStatus === 'rejected')    updates.replied_at = new Date().toISOString();
 
     await supabase.from('offers').update(updates).eq('id', id);
     message.success('状态已更新');
 
-    // 如果接受Offer，触发入职流程
     if (newStatus === 'accepted') {
       await supabase.from('offers').update({
         onboarding_confirmed: true,
@@ -81,15 +84,24 @@ const OfferPage: React.FC = () => {
       }).eq('id', id);
       message.success('已确认入职，请进入入职管理模块');
     }
-
     fetchData();
+  };
+
+  const openCreateFromResume = (resume: any) => {
+    setCreatingFromResume(resume);
+    form.resetFields();
+    form.setFieldsValue({
+      candidate_name:  resume.candidate_name,
+      candidate_email: resume.email || '',
+    });
+    setModalVisible(true);
   };
 
   const columns = [
     { title: 'Offer编号', dataIndex: 'offer_no', width: 140 },
-    { title: '候选人', dataIndex: 'candidate_name', width: 100 },
-    { title: '邮箱', dataIndex: 'candidate_email', width: 180, ellipsis: true },
-    { title: '职位', dataIndex: 'position_name', width: 140 },
+    { title: '候选人',  dataIndex: 'candidate_name', width: 100 },
+    { title: '邮箱',    dataIndex: 'candidate_email', width: 180, ellipsis: true },
+    { title: '职位',    dataIndex: 'position_name',  width: 140 },
     { title: '入职公司', dataIndex: 'onboard_company', width: 140, ellipsis: true },
     {
       title: '月薪',
@@ -97,23 +109,15 @@ const OfferPage: React.FC = () => {
       width: 100,
       render: (v: number) => v ? `¥${v.toLocaleString()}` : '-',
     },
+    { title: '入职日期', dataIndex: 'start_date', width: 110, render: (v: string) => v || '-' },
     {
-      title: '入职日期',
-      dataIndex: 'start_date',
-      width: 110,
-      render: (v: string) => v || '-',
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      width: 100,
+      title: '状态', dataIndex: 'status', width: 100,
       render: (status: OfferStatus) => (
         <Tag color={statusMap[status]?.color}>{statusMap[status]?.label}</Tag>
       ),
     },
     {
-      title: '操作',
-      width: 300,
+      title: '操作', width: 320,
       render: (_: any, record: any) => (
         <Space size="small">
           <Button size="small" icon={<EyeOutlined />}
@@ -161,36 +165,61 @@ const OfferPage: React.FC = () => {
         <div className="table-toolbar">
           <Text strong>共 {data.length} 条Offer</Text>
           {canEdit(user!.role) && (
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => {
-              form.resetFields();
-              setModalVisible(true);
-            }}>
-              创建Offer
-            </Button>
+            <Space>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+                setCreatingFromResume(null);
+                form.resetFields();
+                setModalVisible(true);
+              }}>
+                创建Offer
+              </Button>
+              {pendingResumes.length > 0 && (
+                <Popconfirm
+                  title={`有 ${pendingResumes.length} 位候选人待发Offer，是否批量创建？`}
+                  onConfirm={() => {
+                    message.info('请逐个为待发Offer候选人创建Offer');
+                  }}>
+                  <Button icon={<UserSwitchOutlined />} style={{ background: '#722ed1', borderColor: '#722ed1', color: '#fff' }}>
+                    待发Offer（{pendingResumes.length}）
+                  </Button>
+                </Popconfirm>
+              )}
+            </Space>
           )}
         </div>
 
         {/* Offer流程 */}
-        <Steps
-          current={-1}
-          size="small"
-          style={{ marginBottom: 24 }}
-          items={[
-            { title: '创建Offer', description: '填写录用信息' },
-            { title: '发送邮件', description: '公司邮箱自动发送' },
-            { title: '等待回复', description: '追踪回复状态' },
-            { title: '确认入职', description: '进入入职管理流程' },
-          ]}
-        />
+        <Steps current={-1} size="small" style={{ marginBottom: 24 }} items={[
+          { title: '创建Offer', description: '填写录用信息' },
+          { title: '发送邮件', description: '公司邮箱自动发送' },
+          { title: '等待回复', description: '追踪回复状态' },
+          { title: '确认入职', description: '进入入职管理流程' },
+        ]} />
+
+        {/* 待发Offer候选人列表 */}
+        {pendingResumes.length > 0 && (
+          <Card size="small" title="📋 待发Offer候选人" style={{ marginBottom: 16, borderColor: '#722ed1' }}>
+            <Space wrap>
+              {pendingResumes.map((r: any) => (
+                <Button key={r.id} size="small" style={{ borderColor: '#722ed1', color: '#722ed1' }}
+                  icon={<MailOutlined />}
+                  onClick={() => openCreateFromResume(r)}>
+                  {r.candidate_name} — 发Offer
+                </Button>
+              ))}
+            </Space>
+          </Card>
+        )}
 
         <Table columns={columns} dataSource={data} rowKey="id"
           loading={loading} pagination={{ pageSize: 10 }} scroll={{ x: 1200 }} />
       </Card>
 
+      {/* 创建/编辑Offer弹窗 */}
       <Modal
-        title="创建Offer —— 录用通知书"
+        title={creatingFromResume ? `创建Offer —— ${creatingFromResume.candidate_name}` : '创建Offer —— 录用通知书'}
         open={modalVisible}
-        onCancel={() => { setModalVisible(false); form.resetFields(); }}
+        onCancel={() => { setModalVisible(false); setCreatingFromResume(null); form.resetFields(); }}
         onOk={() => form.submit()}
         width={750}
       >
@@ -255,6 +284,7 @@ const OfferPage: React.FC = () => {
         </Form>
       </Modal>
 
+      {/* 详情弹窗 */}
       <Modal title="Offer详情" open={detailVisible} onCancel={() => setDetailVisible(false)}
         footer={null} width={600}>
         {selectedRecord && (

@@ -22,7 +22,11 @@ export type RecruitmentStatus =
   | 'approved' | 'rejected' | 'published' | 'closed';
 
 export type ResumeStatus =
-  | 'new' | 'screening' | 'interviewing_first' | 'interviewing_second' | 'interviewing_final' | 'offered' | 'accepted' | 'rejected' | 'withdrawn';
+  | 'new' | 'screening'
+  | 'interviewing_first' | 'interviewing_second' | 'interviewing_final'
+  | 'pending_offer'
+  | 'offered' | 'accepted'
+  | 'rejected' | 'withdrawn';
 
 export type InterviewRound = 'first' | 'second' | 'final';
 export type InterviewResult = 'pending' | 'passed' | 'failed' | 'cancelled';

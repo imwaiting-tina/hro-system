@@ -136,14 +136,18 @@ CREATE TYPE resume_source AS ENUM (
   'other'
 );
 
+-- 注意：修改ENUM值需重建类型，见下方 migrate 脚本
 CREATE TYPE resume_status AS ENUM (
-  'new',             -- 新收
-  'screening',       -- 筛选中
-  'interviewing',    -- 面试中
-  'offered',         -- 已发Offer
-  'accepted',        -- 已接受
-  'rejected',        -- 已淘汰
-  'withdrawn'        -- 候选人放弃
+  'new',                   -- 新收
+  'screening',             -- 筛选中
+  'interviewing_first',    -- 一面中
+  'interviewing_second',   -- 二面中
+  'interviewing_final',    -- 终面中
+  'pending_offer',         -- 待发Offer
+  'offered',               -- 已发Offer
+  'accepted',              -- 已接受
+  'rejected',              -- 不录取
+  'withdrawn'              -- 候选人放弃
 );
 
 CREATE TABLE resumes (
@@ -185,9 +189,9 @@ CREATE TABLE resumes (
 -- ============================================================
 
 CREATE TYPE interview_round AS ENUM (
-  'first',           -- 一面 (HR)
-  'second',          -- 二面 (BU负责人)
-  'final'            -- 终面 (Jenny+黄一萧)
+  'first',           -- 一面 (HR/Tina)
+  'second',          -- 二面 (面试官)
+  'final'            -- 终面 (面试官)
 );
 
 CREATE TYPE interview_result AS ENUM (

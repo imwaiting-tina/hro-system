@@ -16,15 +16,16 @@ const { Title, Text } = Typography;
 const { TextArea } = Input;
 
 const statusMap: Record<ResumeStatus, { label: string; color: string }> = {
-  new: { label: '新收', color: 'blue' },
-  screening: { label: '筛选中', color: 'processing' },
-  interviewing_first: { label: '一面中', color: 'orange' },
-  interviewing_second: { label: '二面中', color: 'orange' },
-  interviewing_final: { label: '终面中', color: 'volcano' },
-  offered: { label: '已发Offer', color: 'purple' },
-  accepted: { label: '已接受', color: 'success' },
-  rejected: { label: '已淘汰', color: 'error' },
-  withdrawn: { label: '候选人放弃', color: 'default' },
+  new:                { label: '新收',       color: 'blue' },
+  screening:          { label: '筛选中',     color: 'processing' },
+  interviewing_first:  { label: '一面中',     color: 'orange' },
+  interviewing_second: { label: '二面中',     color: 'orange' },
+  interviewing_final:   { label: '终面中',     color: 'volcano' },
+  pending_offer:       { label: '待发Offer',  color: 'purple' },
+  offered:            { label: '已发Offer',   color: 'geekblue' },
+  accepted:           { label: '已接受',     color: 'success' },
+  rejected:           { label: '不录取',     color: 'error' },
+  withdrawn:          { label: '候选人放弃', color: 'default' },
 };
 
 const ResumeLibPage: React.FC = () => {
@@ -115,10 +116,20 @@ const ResumeLibPage: React.FC = () => {
               编辑
             </Button>
           )}
-          {record.status === 'new' && canEdit(user!.role) && (
+      {record.status === 'screening' && canEdit(user!.role) && (
             <Button size="small" type="primary"
-              onClick={() => handleStatusChange(record.id, 'screening')}>
-              开始筛选
+              onClick={() => handleStatusChange(record.id, 'interviewing_first')}>
+              进入一面
+            </Button>
+          )}
+          {record.status === 'pending_offer' && canEdit(user!.role) && (
+            <Button size="small" type="primary" style={{ background: '#722ed1', borderColor: '#722ed1' }}
+              onClick={() => {
+                setDetailVisible(false);
+                // 触发跳转到Offer页面（通过全局事件或路由）
+                window.location.href = '/hro-system/recruitment/offer';
+              }}>
+              发送Offer
             </Button>
           )}
         </Space>
