@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>正在跳转...</title>
+    <script type="text/javascript">
+      // 单页应用 SPA 重定向：将 GitHub Pages 的 404 路径还原为客户端路由
+      // 原理：将实际访问的路径存入 sessionStorage，主页加载后从中读取并跳转
+      sessionStorage.redirect = location.pathname + location.search + location.hash;
+      location.replace('/hro-system/');
+    </script>
+  </head>
+  <body>
+    <p>正在跳转，请稍候...</p>
+  </body>
+</html>
