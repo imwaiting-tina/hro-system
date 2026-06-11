@@ -445,13 +445,14 @@ const InterviewPage: React.FC = () => {
                 (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
               }
               options={resumes
-                .filter((r: any) => ['new', 'screening', 'interviewing_first', 'interviewing_second'].includes(r.status))
+                .filter((r: any) => ['new', 'screening', 'interviewing_first', 'interviewing_second', 'interviewing_final'].includes(r.status))
                 .map((r: any) => {
                   const statusLabel =
                     r.status === 'new' ? '新收→待一面' :
                     r.status === 'screening' ? '筛选中→待一面' :
                     r.status === 'interviewing_first' ? '待安排一面' :
-                    r.status === 'interviewing_second' ? '一面已通过→待二面' : r.status;
+                    r.status === 'interviewing_second' ? '一面已通过→待二面' :
+                    r.status === 'interviewing_final' ? '二面已通过→待终面' : r.status;
                   return {
                     label: `${r.candidate_name}（${statusLabel}）`,
                     value: r.id,
