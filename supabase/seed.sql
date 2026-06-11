@@ -6,11 +6,11 @@
 -- 预设5个账号 (密码: ky2026)
 -- bcrypt hash of "ky2026" - 在实际部署时需要通过Supabase Auth API创建
 INSERT INTO users (username, password_hash, display_name, role, email, department, position) VALUES
-  ('tina',    '$2a$10$placeholder_tina',    '黄燕婷', 'sub_admin',   'tina_huang@china-key.com',   '人事部',   'HR经理'),
-  ('jenny',   '$2a$10$placeholder_jenny',   'Jenny',   'super_admin', 'jenny@china-key.com',        '董事会',   '董事'),
-  ('shaun',   '$2a$10$placeholder_shaun',   '黄一萧', 'main_admin',  'shaun_huang@china-key.com',   '人事部',   '人事负责人'),
-  ('bella',   '$2a$10$placeholder_bella',   '王妤扬', 'bu_head',     'bella_wang@china-key.com',    '业务部',   'BU负责人'),
-  ('employee','$2a$10$placeholder_employee','普通员工','employee',    'employee@china-key.com',      '业务部',   '员工')
+  ('tina',    '$2a$10$igAO1bB9ioW53rMkgxfVaeCcNJQfCh09Fss6z5Sn/2T6D5Tyu0Qoq',    '黄燕婷', 'sub_admin',   'tina_huang@china-key.com',   '人事部',   'HR经理'),
+  ('jenny',   '$2a$10$igAO1bB9ioW53rMkgxfVaeCcNJQfCh09Fss6z5Sn/2T6D5Tyu0Qoq',   'Jenny',   'super_admin', 'jenny@china-key.com',        '董事会',   '董事'),
+  ('shaun',   '$2a$10$igAO1bB9ioW53rMkgxfVaeCcNJQfCh09Fss6z5Sn/2T6D5Tyu0Qoq',   '黄一萧', 'main_admin',  'shaun_huang@china-key.com',   '人事部',   '人事负责人'),
+  ('bella',   '$2a$10$igAO1bB9ioW53rMkgxfVaeCcNJQfCh09Fss6z5Sn/2T6D5Tyu0Qoq',   '王妤扬', 'bu_head',     'bella_wang@china-key.com',    '业务部',   'BU负责人'),
+  ('employee','$2a$10$igAO1bB9ioW53rMkgxfVaeCcNJQfCh09Fss6z5Sn/2T6D5Tyu0Qoq','普通员工','employee',    'employee@china-key.com',      '业务部',   '员工')
 ON CONFLICT (username) DO NOTHING;
 
 -- 预设部门

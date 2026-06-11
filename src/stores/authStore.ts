@@ -2,6 +2,7 @@
 // 认证Store - Zustand
 // ============================================================
 import { create } from 'zustand';
+import bcrypt from 'bcryptjs';
 import { supabase } from '../utils/supabase';
 import type { User, UserRole } from '../types';
 
@@ -22,59 +23,37 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (username: string, password: string) => {
     try {
       // 从users表查询用户
-      const { data: users, error } = await supabase
+      const { data: userData, error } = await supabase
         .from('users')
         .select('*')
         .eq('username', username)
         .eq('is_active', true)
         .single();
 
-      if (error || !users) {
+      if (error || !userData) {
         return { success: false, error: '用户名或密码错误' };
       }
 
-      // 验证密码 (使用 Supabase Auth 或自定义验证)
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: users.email || `${username}@hro-system.local`,
-        password: password,
-      });
-
-      if (authError) {
-        // 尝试注册 (首次登录自动注册)
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: users.email || `${username}@hro-system.local`,
-          password: password,
-        });
-
-        if (signUpError) {
-          return { success: false, error: '密码验证失败' };
-        }
-
-        // 注册成功后重新登录
-        const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
-          email: users.email || `${username}@hro-system.local`,
-          password: password,
-        });
-
-        if (retryError) {
-          return { success: false, error: '登录失败' };
-        }
+      // 使用 bcrypt 验证密码
+      const isValid = await bcrypt.compare(password, userData.password_hash);
+      if (!isValid) {
+        return { success: false, error: '用户名或密码错误' };
       }
 
       const user: User = {
-        id: users.id,
-        username: users.username,
-        display_name: users.display_name,
-        role: users.role as UserRole,
-        email: users.email,
-        phone: users.phone,
-        department: users.department,
-        position: users.position,
-        avatar_url: users.avatar_url,
-        is_active: users.is_active,
+        id: userData.id,
+        username: userData.username,
+        display_name: userData.display_name,
+        role: userData.role as UserRole,
+        email: userData.email,
+        phone: userData.phone,
+        department: userData.department,
+        position: userData.position,
+        avatar_url: userData.avatar_url,
+        is_active: userData.is_active,
       };
 
-      // 保存登录状态
+      // 保存登录状态到 localStorage
       localStorage.setItem('hro_user', JSON.stringify(user));
 
       set({ user, isAuthenticated: true, loading: false });
@@ -85,7 +64,6 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
-    await supabase.auth.signOut();
     localStorage.removeItem('hro_user');
     set({ user: null, isAuthenticated: false, loading: false });
   },
@@ -97,33 +75,6 @@ export const useAuthStore = create<AuthState>((set) => ({
         const user = JSON.parse(cached) as User;
         set({ user, isAuthenticated: true, loading: false });
         return;
-      }
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const { data: users } = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', session.user.email)
-          .single();
-
-        if (users) {
-          const user: User = {
-            id: users.id,
-            username: users.username,
-            display_name: users.display_name,
-            role: users.role as UserRole,
-            email: users.email,
-            phone: users.phone,
-            department: users.department,
-            position: users.position,
-            avatar_url: users.avatar_url,
-            is_active: users.is_active,
-          };
-          localStorage.setItem('hro_user', JSON.stringify(user));
-          set({ user, isAuthenticated: true, loading: false });
-          return;
-        }
       }
 
       set({ user: null, isAuthenticated: false, loading: false });
