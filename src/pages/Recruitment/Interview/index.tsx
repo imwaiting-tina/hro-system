@@ -377,10 +377,13 @@ const InterviewPage: React.FC = () => {
               填写结果
             </Button>
           )}
-          {record.result && (
+          {record.result && record.result !== 'pending' && (
             <Tag color={statusColor[record.result]}>
               {record.result === 'passed' ? `${roundConfig[record.round]?.label}通过` : `${roundConfig[record.round]?.label}未通过`}
             </Tag>
+          )}
+          {record.result === 'pending' && (
+            <Tag color="processing">待评定</Tag>
           )}
         </Space>
       ),
