@@ -18,7 +18,9 @@ const { TextArea } = Input;
 const statusMap: Record<ResumeStatus, { label: string; color: string }> = {
   new: { label: '新收', color: 'blue' },
   screening: { label: '筛选中', color: 'processing' },
-  interviewing: { label: '面试中', color: 'warning' },
+  interviewing_first: { label: '一面中', color: 'orange' },
+  interviewing_second: { label: '二面中', color: 'orange' },
+  interviewing_final: { label: '终面中', color: 'volcano' },
   offered: { label: '已发Offer', color: 'purple' },
   accepted: { label: '已接受', color: 'success' },
   rejected: { label: '已淘汰', color: 'error' },
