@@ -90,9 +90,13 @@ const InterviewPage: React.FC = () => {
   // Tina 才能安排面试
   const canArrange = isTina;
 
+  // 终态结果（不可再填）
+  const isFinalResult = (result: string) => ['passed', 'failed', 'cancelled'].includes(result);
+
   // 判断当前用户是否能填该面试的结果
   const canFillResult = (interview: any) => {
-    if (!interview || interview.result) return false; // 已有结果
+    if (!interview) return false;
+    if (isFinalResult(interview.result)) return false; // 已有终态结果
     const decider = roundConfig[interview.round]?.resultDecider;
     if (decider === 'tina') return isTina;
     if (decider === 'interviewer') {
@@ -206,7 +210,7 @@ const InterviewPage: React.FC = () => {
       return;
     }
 
-    // 创建面试记录
+    // 创建面试记录（result 不设值，表示待评定）
     const { data: inserted, error } = await supabase.from('interviews').insert({
       resume_id: values.resume_id,
       round,
@@ -214,7 +218,6 @@ const InterviewPage: React.FC = () => {
       scheduled_at: values.scheduled_at?.toISOString(),
       location: values.location || '',
       feedback: values.feedback || '',
-      result: 'pending',
     }).select('id').single();
 
     if (error) {
@@ -358,7 +361,10 @@ const InterviewPage: React.FC = () => {
       title: '结果',
       dataIndex: 'result',
       width: 100,
-      render: (r: string) => r ? <Tag color={statusColor[r]}>{r === 'passed' ? '通过' : r === 'failed' ? '未通过' : r === 'cancelled' ? '取消' : r}</Tag> : <Tag color="default">待评定</Tag>,
+      render: (r: string) => {
+        if (!r) return <Tag color="processing">待评定</Tag>;
+        return <Tag color={statusColor[r]}>{r === 'passed' ? '通过' : r === 'failed' ? '未通过' : r === 'cancelled' ? '取消' : r}</Tag>;
+      },
     },
     {
       title: '结果备注',
@@ -377,12 +383,12 @@ const InterviewPage: React.FC = () => {
               填写结果
             </Button>
           )}
-          {record.result && record.result !== 'pending' && (
+          {record.result && isFinalResult(record.result) && (
             <Tag color={statusColor[record.result]}>
               {record.result === 'passed' ? `${roundConfig[record.round]?.label}通过` : `${roundConfig[record.round]?.label}未通过`}
             </Tag>
           )}
-          {record.result === 'pending' && (
+          {!record.result && (
             <Tag color="processing">待评定</Tag>
           )}
         </Space>
