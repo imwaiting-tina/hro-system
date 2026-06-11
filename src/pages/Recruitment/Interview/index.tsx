@@ -1,22 +1,38 @@
 import React, { useEffect, useState } from 'react';
 import {
   Table, Button, Tag, Space, Modal, Form, Input, Select,
-  DatePicker, message, Typography, Card, Popconfirm,
+  DatePicker, message, Typography, Card,
 } from 'antd';
-import { PlusOutlined, EyeOutlined, BellOutlined } from '@ant-design/icons';
-import { useAuthStore, canEdit } from '../../../stores/authStore';
+import { PlusOutlined, BellOutlined } from '@ant-design/icons';
+import { useAuthStore } from '../../../stores/authStore';
 import supabase from '../../../utils/supabase';
-import type { ResumeStatus, InterviewRound, InterviewResult } from '../../../types';
+import type { ResumeStatus, InterviewRound } from '../../../types';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
-// 面试轮次定义：key、标签、谁来决定结果
-const roundConfig: Record<string, { label: string; resultDecider: 'tina' | 'interviewer' }> = {
-  first:  { label: '一面',    resultDecider: 'tina' },
-  second: { label: '二面',    resultDecider: 'interviewer' },
-  final:  { label: '终面',    resultDecider: 'interviewer' },
+// 面试轮次定义：key、标签、谁来决定结果、固定面试官角色
+const roundConfig: Record<string, {
+  label: string;
+  resultDecider: 'tina' | 'interviewer';
+  interviewerRoles: string[];  // 固定面试官角色
+}> = {
+  first:  {
+    label: '一面',
+    resultDecider: 'tina',
+    interviewerRoles: ['main_admin', 'sub_admin'],  // Tina（HR团队）
+  },
+  second: {
+    label: '二面',
+    resultDecider: 'interviewer',
+    interviewerRoles: ['bu_head'],  // BU负责人
+  },
+  final:  {
+    label: '终面',
+    resultDecider: 'interviewer',
+    interviewerRoles: ['super_admin'],  // Jenny / 高管
+  },
 };
 
 // 简历状态映射：面试轮次 → 对应简历状态
@@ -86,15 +102,52 @@ const InterviewPage: React.FC = () => {
     return false;
   };
 
+  // 根据候选人状态，计算可选的面试轮次
+  const getAvailableRounds = (resumeStatus: string): InterviewRound[] => {
+    // 新收/筛选中 → 只能一面
+    if (resumeStatus === 'new' || resumeStatus === 'screening') return ['first'];
+    // 一面中 → 如果一面已通过则只能二面，否则可选一面（待安排场景）
+    if (resumeStatus === 'interviewing_first') return ['second'];
+    if (resumeStatus === 'interviewing_second') return ['final'];
+    return [];
+  };
+
   const openAdd = () => {
     form.resetFields();
     setModalVisible(true);
   };
 
+  const handleResumeChange = (resumeId: string) => {
+    if (!resumeId) {
+      form.setFieldsValue({ round: undefined, interviewers: undefined });
+      return;
+    }
+    const resume = resumes.find((r: any) => r.id === resumeId);
+    if (!resume) return;
+
+    const availableRounds = getAvailableRounds(resume.status);
+    if (availableRounds.length > 0) {
+      const round = availableRounds[0];
+      form.setFieldsValue({ round });
+      // 自动匹配该轮次的面试官
+      matchInterviewers(round);
+    }
+  };
+
+  // 根据轮次自动匹配面试官
+  const matchInterviewers = (round: InterviewRound) => {
+    const roles = roundConfig[round]?.interviewerRoles || [];
+    const matched = users.filter((u: any) => roles.includes(u.role)).map((u: any) => u.id);
+    form.setFieldsValue({ interviewers: matched });
+  };
+
   const handleSubmit = async (values: any) => {
     if (!values.resume_id) { message.warning('请选择候选人'); return; }
+    if (!values.round) { message.warning('面试轮次未确定'); return; }
 
-    // 查该候选人已有的面试轮次
+    const round: InterviewRound = values.round;
+
+    // 查该候选人已有的面试
     const { data: existing } = await supabase
       .from('interviews')
       .select('round,result')
@@ -103,15 +156,21 @@ const InterviewPage: React.FC = () => {
     const hasRound = (r: string) => existing?.some((x: any) => x.round === r);
     const pendingRound = existing?.find((x: any) => !x.result)?.round;
 
+    // 检查是否有待评定的面试
     if (pendingRound) {
       message.warning(`该候选人还有${roundConfig[pendingRound]?.label}未进行结果评定，请先完成`);
       return;
     }
 
-    // 确定本次轮次
-    let round: InterviewRound = 'first';
-    if (hasRound('first') && !hasRound('second')) round = 'second';
-    if (hasRound('first') && hasRound('second') && !hasRound('final')) round = 'final';
+    // 不允许跳过轮次：查上一轮是否通过
+    if (round === 'second' && (!hasRound('first') || !existing?.find((x: any) => x.round === 'first' && x.result === 'passed'))) {
+      message.warning('请先完成一面并通过后再安排二面');
+      return;
+    }
+    if (round === 'final' && (!hasRound('second') || !existing?.find((x: any) => x.round === 'second' && x.result === 'passed'))) {
+      message.warning('请先完成二面并通过后再安排终面');
+      return;
+    }
 
     // 已有该轮次则不允许重复
     if (hasRound(round)) {
@@ -119,7 +178,8 @@ const InterviewPage: React.FC = () => {
       return;
     }
 
-    await supabase.from('interviews').insert({
+    // 创建面试记录
+    const { data: inserted, error } = await supabase.from('interviews').insert({
       resume_id: values.resume_id,
       round,
       interviewers: values.interviewers || [],
@@ -127,21 +187,26 @@ const InterviewPage: React.FC = () => {
       location: values.location || '',
       note: values.note || '',
       result: null,
-    });
+    }).select('id').single();
+
+    if (error) {
+      message.error('面试安排失败：' + error.message);
+      return;
+    }
 
     // 更新简历状态为对应面试中
     await supabase.from('resumes').update({ status: resumeStatusMap[round] })
       .eq('id', values.resume_id);
 
     // 发通知给面试官
+    const candidateName = resumes.find((r: any) => r.id === values.resume_id)?.candidate_name || '未知';
     if (values.interviewers?.length > 0) {
-      const candidateName = resumes.find((r: any) => r.id === values.resume_id)?.candidate_name || '未知';
       for (const uid of values.interviewers) {
         await supabase.from('notifications').insert({
-          interview_id: (await supabase.from('interviews').select('id').eq('resume_id', values.resume_id).single()).data?.id,
+          interview_id: inserted?.id,
           user_id: uid,
           title: `新面试安排：${roundConfig[round].label}`,
-          content: `候选人【${candidateName}】的${roundConfig[round].label}已安排，请准时参加。时间：${values.scheduled_at?.format('YYYY-MM-DD HH:mm')}`,
+          content: `候选人【${candidateName}】的${roundConfig[round].label}已安排，请准时参加。\n时间：${values.scheduled_at?.format('YYYY-MM-DD HH:mm')}\n地点：${values.location || '待定'}`,
         });
       }
     }
@@ -313,36 +378,54 @@ const InterviewPage: React.FC = () => {
         onCancel={() => { setModalVisible(false); form.resetFields(); }}
         onOk={() => form.submit()} width={700}>
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
-          <Form.Item name="resume_id" label="候选人" rules={[{ required: true }]}>
+          <Form.Item name="resume_id" label="选择候选人" rules={[{ required: true }]}>
             <Select
               showSearch
-              placeholder="选择候选人（仅显示待面试的简历）"
+              placeholder="选择候选人（仅显示可安排面试的简历）"
+              onChange={handleResumeChange}
               filterOption={(input, option) =>
                 (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
               }
               options={resumes
-                .filter((r: any) => ['screening', 'interviewing_first', 'interviewing_second', 'interviewing_final'].includes(r.status))
-                .map((r: any) => ({
-                  label: `${r.candidate_name}（${r.status === 'screening' ? '筛选中' : r.status === 'interviewing_first' ? '一面中' : r.status === 'interviewing_second' ? '二面中' : '终面中'}）`,
-                  value: r.id,
-                }))}
+                .filter((r: any) => ['new', 'screening', 'interviewing_first', 'interviewing_second'].includes(r.status))
+                .map((r: any) => {
+                  const statusLabel =
+                    r.status === 'new' ? '新收' :
+                    r.status === 'screening' ? '筛选中' :
+                    r.status === 'interviewing_first' ? '一面已通过→待二面' :
+                    r.status === 'interviewing_second' ? '二面已通过→待终面' : r.status;
+                  return {
+                    label: `${r.candidate_name}（${statusLabel}）`,
+                    value: r.id,
+                  };
+                })}
             />
           </Form.Item>
-          <Form.Item name="interviewers" label="面试官（二面/终面必选）">
+
+          <Form.Item name="round" label="面试轮次" rules={[{ required: true }]}>
+            <Select
+              placeholder="选择候选人后自动确定轮次"
+              options={[
+                { label: '一面（HR面试）', value: 'first' },
+                { label: '二面（BU负责人面试）', value: 'second' },
+                { label: '终面（Jenny终审）', value: 'final' },
+              ]}
+              onChange={(value) => matchInterviewers(value as InterviewRound)}
+            />
+          </Form.Item>
+
+          <Form.Item name="interviewers" label="面试官（自动匹配）">
             <Select
               mode="multiple"
-              placeholder="选择面试官"
-              filterOption={(input, option) =>
-                (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
-              }
-              options={users
-                .filter((u: any) => ['super_admin', 'main_admin', 'sub_admin', 'bu_head'].includes(u.role))
-                .map((u: any) => ({
-                  label: `${u.display_name}（${u.department || '-'}）`,
-                  value: u.id,
-                }))}
+              disabled
+              placeholder="根据轮次自动匹配"
+              options={users.map((u: any) => ({
+                label: `${u.display_name}（${u.department || u.role}）`,
+                value: u.id,
+              }))}
             />
           </Form.Item>
+
           <Form.Item name="scheduled_at" label="面试时间" rules={[{ required: true }]}>
             <DatePicker showTime style={{ width: '100%' }} />
           </Form.Item>
