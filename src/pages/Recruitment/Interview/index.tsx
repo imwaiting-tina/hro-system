@@ -21,7 +21,7 @@ const roundConfig: Record<string, {
   first:  {
     label: '一面',
     resultDecider: 'tina',
-    interviewerRoles: ['main_admin'],  // 只有Tina
+    interviewerRoles: [],  // 固定为tina本人，不按角色匹配
   },
   second: {
     label: '二面',
@@ -157,8 +157,15 @@ const InterviewPage: React.FC = () => {
 
   // 根据轮次自动匹配面试官
   const matchInterviewers = (round: InterviewRound) => {
-    const roles = roundConfig[round]?.interviewerRoles || [];
-    const matched = users.filter((u: any) => roles.includes(u.role)).map((u: any) => u.id);
+    let matched: string[] = [];
+    if (round === 'first') {
+      // 一面固定为 tina
+      const tina = users.find((u: any) => u.username === 'tina');
+      matched = tina ? [tina.id] : [];
+    } else {
+      const roles = roundConfig[round]?.interviewerRoles || [];
+      matched = users.filter((u: any) => roles.includes(u.role)).map((u: any) => u.id);
+    }
     form.setFieldsValue({ interviewers: matched });
   };
 
@@ -435,10 +442,11 @@ const InterviewPage: React.FC = () => {
             />
           </Form.Item>
 
-          <Form.Item name="interviewers" label="面试官（自动匹配）">
+          <Form.Item name="interviewers" label="面试官（自动匹配，不可修改）">
             <Select
               mode="multiple"
               disabled
+              style={{ background: '#f5f5f5' }}
               placeholder="根据轮次自动匹配"
               options={users.map((u: any) => ({
                 label: `${u.display_name}（${u.department || u.role}）`,
