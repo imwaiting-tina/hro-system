@@ -102,6 +102,9 @@ const InterviewPage: React.FC = () => {
   // Tina 才能安排面试
   const canArrange = isTina;
 
+  // 终态结果（不可再填）
+  const isFinalResult = (result: string | null) => result && ['passed', 'failed', 'cancelled'].includes(result);
+
   // 判断当前用户是否能填该面试的结果（简化：面试官或被分配者都可填）
   const canFillResult = (interview: any) => {
     if (!interview || isFinalResult(interview.result)) return false;
