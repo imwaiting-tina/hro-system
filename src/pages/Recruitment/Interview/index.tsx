@@ -256,59 +256,71 @@ const InterviewPage: React.FC = () => {
     const interview = selectedInterview;
     const resumeId = interview.resume_id;
     const round = interview.round;
+    const config = roundConfig[round];
+    const candidateName = resumes.find((r: any) => r.id === resumeId)?.candidate_name || '未知';
 
-    // 更新面试结果
-    await supabase.from('interviews').update({
-      result: values.result,
-      result_note: values.result_note || '',
-    }).eq('id', interview.id);
-
-    if (values.result === 'failed') {
-      // 不通过 → 简历状态"不录取"
-      await supabase.from('resumes').update({ status: 'rejected' }).eq('id', resumeId);
-      // 通知 Tina
-      const tinaUser = users.find((u: any) => u.username === 'tina');
-      if (tinaUser) {
-        await supabase.from('notifications').insert({
-          interview_id: interview.id,
-          user_id: tinaUser.id,
-          title: '面试未通过通知',
-          content: `候选人【${resumes.find((r: any) => r.id === resumeId)?.candidate_name || '未知'}】${roundConfig[round]?.label}未通过，简历状态已标记为"不录取"`,
-        });
-      }
-    } else if (values.result === 'passed') {
-      const nextRound = nextRoundMap[round];
-      if (nextRound) {
-        // 进入下一轮
-        const nextStatus = resumeStatusMap[nextRound];
-        await supabase.from('resumes').update({ status: nextStatus }).eq('id', resumeId);
-        // 通知 Tina 安排下一轮
-        const tinaUser = users.find((u: any) => u.username === 'tina');
-        if (tinaUser) {
-          await supabase.from('notifications').insert({
-            interview_id: interview.id,
-            user_id: tinaUser.id,
-            title: '请安排下一轮面试',
-            content: `候选人【${resumes.find((r: any) => r.id === resumeId)?.candidate_name || '未知'}】${roundConfig[round]?.label}已通过，请安排${roundConfig[nextRound].label}`,
-          });
-        }
-      } else {
-        // 终面通过 → 待发Offer
-        await supabase.from('resumes').update({ status: 'pending_offer' }).eq('id', resumeId);
-        // 通知 Tina 发 Offer
-        const tinaUser = users.find((u: any) => u.username === 'tina');
-        if (tinaUser) {
-          await supabase.from('notifications').insert({
-            interview_id: interview.id,
-            user_id: tinaUser.id,
-            title: '终面通过，请发Offer',
-            content: `候选人【${resumes.find((r: any) => r.id === resumeId)?.candidate_name || '未知'}】终面已通过，请尽快发送Offer！`,
-          });
-        }
-      }
+    // 确定审批人和审批步骤
+    let approverRole: string;
+    let stepName: string;
+    if (round === 'first') {
+      // 一面 → Tina 审批
+      approverRole = 'main_admin';
+      stepName = `一面结果审批（HR负责人）`;
+    } else if (round === 'second') {
+      // 二面 → BU负责人审批
+      approverRole = 'bu_head';
+      stepName = `二面结果审批（BU负责人）`;
+    } else {
+      // 终面 → 高管审批
+      approverRole = 'super_admin';
+      stepName = `终面结果审批（高管终审）`;
     }
 
-    message.success('结果已保存');
+    // 查找审批人
+    const approver = users.find((u: any) => u.role === approverRole);
+    if (!approver) {
+      message.error(`未找到${stepName}的审批人`);
+      return;
+    }
+
+    // 先更新面试记录：保存评价但状态仍为 pending（等审批）
+    await supabase.from('interviews').update({
+      feedback: values.feedback || '',
+      // 暂存结果意向（审批通过后正式生效）
+      interviewer_notes: JSON.stringify({
+        proposed_result: values.result,
+        evaluation: values.feedback || '',
+        submitted_by: user?.id,
+        submitted_at: new Date().toISOString(),
+      }),
+    }).eq('id', interview.id);
+
+    // 创建审批记录
+    const { error: approvalError } = await supabase.from('approval_records').insert({
+      module: 'interview',
+      record_id: interview.id,
+      step_order: 1,
+      step_name: stepName,
+      approver_id: approver.id,
+      approver_role: approverRole,
+      status: 'pending',
+      opinion: '',
+    });
+
+    if (approvalError) {
+      message.error('提交审批失败：' + approvalError.message);
+      return;
+    }
+
+    // 通知审批人
+    await supabase.from('notifications').insert({
+      interview_id: interview.id,
+      user_id: approver.id,
+      title: `${config.label}结果待审批`,
+      content: `候选人【${candidateName}】的${config.label}结果已提交，请审批。\n提交结果：${values.result === 'passed' ? '通过' : '未通过'}\n评价：${values.feedback || '无'}`,
+    });
+
+    message.success('面试结果已提交审批，请等待审批完成');
     setResultModalVisible(false);
     setSelectedInterview(null);
     resultForm.resetFields();
@@ -467,25 +479,30 @@ const InterviewPage: React.FC = () => {
         </Form>
       </Modal>
 
-      {/* 填写面试结果弹窗 */}
-      <Modal title={`填写面试结果 —— ${selectedInterview ? roundConfig[selectedInterview.round]?.label : ''}`}
+      {/* 填写面试结果弹窗 — 提交审批 */}
+      <Modal title={`提交面试结果 —— ${selectedInterview ? roundConfig[selectedInterview.round]?.label : ''}`}
         open={resultModalVisible}
         onCancel={() => { setResultModalVisible(false); setSelectedInterview(null); }}
-        onOk={() => resultForm.submit()} width={550}>
+        onOk={() => resultForm.submit()} width={600}>
         <Form form={resultForm} layout="vertical" onFinish={handleResultSubmit}>
-          <Form.Item name="result" label="面试结果" rules={[{ required: true }]}>
+          <Form.Item name="result" label="面试结果" rules={[{ required: true, message: '请选择面试结果' }]}>
             <Select options={[
               { label: '✅ 通过', value: 'passed' },
               { label: '❌ 未通过', value: 'failed' },
               { label: '⚠️ 取消', value: 'cancelled' },
             ]} />
           </Form.Item>
-          <Form.Item name="result_note" label="结果备注">
-            <TextArea rows={3} placeholder="面试评价、不通过原因等" />
+          <Form.Item name="feedback" label="面试评价" rules={[{ required: true, message: '请填写面试评价' }]}>
+            <TextArea rows={4} placeholder="请详细填写面试评价，包括：候选人表现、技能匹配度、沟通能力、建议等" />
           </Form.Item>
-          {selectedInterview && roundConfig[selectedInterview.round]?.resultDecider === 'interviewer' && (
-            <Card size="small" style={{ background: '#fffbe6', border: '1px solid #ffe58f' }}>
-              <Text type="warning">提示：面试结果由面试官填写，Tina 将收到通知。</Text>
+          {selectedInterview && (
+            <Card size="small" style={{ background: '#fffbe6', border: '1px solid #ffe58f', marginBottom: 16 }}>
+              <Text type="warning">
+                提交后将进入审批流程：
+                {selectedInterview.round === 'first' ? 'Tina（HR负责人）审批' :
+                 selectedInterview.round === 'second' ? 'BU负责人审批' : '高管终审'}
+                ，审批通过后结果正式生效。
+              </Text>
             </Card>
           )}
         </Form>

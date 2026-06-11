@@ -828,7 +828,21 @@ CREATE TABLE approval_records (
 );
 
 -- ============================================================
--- 17. 操作日志
+-- 17. 消息通知
+-- ============================================================
+
+CREATE TABLE notifications (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id),            -- 接收人
+  interview_id UUID REFERENCES interviews(id),   -- 关联面试（可选）
+  title VARCHAR(200),                             -- 通知标题
+  content TEXT,                                   -- 通知内容
+  is_read BOOLEAN DEFAULT FALSE,                  -- 是否已读
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ============================================================
+-- 18. 操作日志
 -- ============================================================
 
 CREATE TABLE operation_logs (
@@ -844,7 +858,7 @@ CREATE TABLE operation_logs (
 );
 
 -- ============================================================
--- 18. 系统配置
+-- 19. 系统配置
 -- ============================================================
 
 CREATE TABLE system_configs (
@@ -913,7 +927,9 @@ ALTER TABLE probation_evaluations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contract_renewals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE employee_transfers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE resignations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE approval_records ENABLE ROW LEVEL SECURITY;
+CREATE INDEX idx_notifications_user ON notifications(user_id);
+
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
 -- 超级管理员/主管理员/子管理员: 全部可读写
 -- BU负责人: 本部门数据可读写
