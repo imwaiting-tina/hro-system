@@ -29,6 +29,7 @@ const InterviewPage: React.FC = () => {
   const user = useAuthStore((s) => s.user);
   const [data, setData] = useState<any[]>([]);
   const [resumes, setResumes] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [detailVisible, setDetailVisible] = useState(false);
@@ -37,12 +38,14 @@ const InterviewPage: React.FC = () => {
 
   const fetchData = async () => {
     setLoading(true);
-    const [{ data: interviews }, { data: resumeList }] = await Promise.all([
+    const [{ data: interviews }, { data: resumeList }, { data: userList }] = await Promise.all([
       supabase.from('interviews').select('*').order('scheduled_at', { ascending: true }),
       supabase.from('resumes').select('id,candidate_name').in('status', ['screening', 'interviewing']),
+      supabase.from('users').select('id,display_name,role,department'),
     ]);
     if (interviews) setData(interviews);
     if (resumeList) setResumes(resumeList);
+    if (userList) setUsers(userList);
     setLoading(false);
   };
 
@@ -93,6 +96,18 @@ const InterviewPage: React.FC = () => {
       dataIndex: 'round',
       width: 130,
       render: (round: InterviewRound) => <Tag color="blue">{roundMap[round]}</Tag>,
+    },
+    {
+      title: '面试官',
+      dataIndex: 'interviewers',
+      width: 150,
+      render: (ids: string[]) => {
+        if (!ids || ids.length === 0) return '-';
+        return ids.map((id) => {
+          const u = users.find((u: any) => u.id === id);
+          return u?.display_name || id.slice(0, 8);
+        }).join('、');
+      },
     },
     {
       title: '面试时间',
@@ -210,6 +225,21 @@ const InterviewPage: React.FC = () => {
               { label: '二面(BU负责人)', value: 'second' },
               { label: '终面(Jenny+黄一萧)', value: 'final' },
             ]} />
+          </Form.Item>
+          <Form.Item name="interviewers" label="面试官" rules={[{ required: true, message: '请选择面试官' }]}>
+            <Select
+              mode="multiple"
+              placeholder="选择面试官"
+              filterOption={(input, option) =>
+                (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
+              }
+              options={users
+                .filter((u: any) => ['super_admin', 'main_admin', 'sub_admin', 'bu_head'].includes(u.role))
+                .map((u: any) => ({
+                  label: `${u.display_name} (${u.department || '-'})`,
+                  value: u.id,
+                }))}
+            />
           </Form.Item>
           <Form.Item name="scheduled_at" label="面试时间" rules={[{ required: true }]}>
             <DatePicker showTime style={{ width: '100%' }} />
