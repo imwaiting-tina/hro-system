@@ -33,7 +33,7 @@ const roundConfig: Record<string, {
     label: '终面',
     resultDecider: 'interviewer',
     interviewerRoles: ['super_admin'],  // Jenny
-    extraInterviewers: ['huangyixiao'], // 黄一萧（按username匹配）
+    extraInterviewers: ['shaun'], // 黄一萧（按username匹配）
   },
 };
 
