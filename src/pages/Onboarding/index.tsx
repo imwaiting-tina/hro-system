@@ -8,6 +8,7 @@ const { Title, Text } = Typography;
 
 export interface OnboardingContext {
   selectedEmployeeId: string | undefined;
+  selectedEmployee: any | undefined;
   employees: any[];
   announcementData: any;
   onAnnouncementChange: (data: any) => void;
@@ -86,8 +87,13 @@ const OnboardingPage: React.FC = () => {
     message.success('迎新公告已保存');
   }, [selectedEmployeeId, announcementData]);
 
+  const selectedEmployee = selectedEmployeeId
+    ? employees.find((e: any) => e.id === selectedEmployeeId)
+    : undefined;
+
   const context: OnboardingContext = {
     selectedEmployeeId,
+    selectedEmployee,
     employees,
     announcementData,
     onAnnouncementChange: setAnnouncementData,

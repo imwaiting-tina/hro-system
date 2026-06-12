@@ -47,7 +47,7 @@ import { useOutletContext } from 'react-router-dom';
 import type { OnboardingContext } from './index';
 
 const OnboardingGuide: React.FC = () => {
-  const { selectedEmployeeId: employeeId } = useOutletContext<OnboardingContext>();
+  const { selectedEmployeeId: employeeId, selectedEmployee } = useOutletContext<OnboardingContext>();
   const user = useAuthStore((s) => s.user);
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -69,12 +69,20 @@ const OnboardingGuide: React.FC = () => {
 
   const initTasks = async () => {
     if (!employeeId || !user) return;
-    const inserts = DEFAULT_GUIDE_TASKS.map((t) => ({
+
+    // 根据员工类型过滤任务：保安不需要 HKMS 系统和邮箱
+    const isSecurity = selectedEmployee?.employee_type === 'security';
+    const filteredTasks = isSecurity
+      ? DEFAULT_GUIDE_TASKS.filter((t) => t.task_name !== '邮箱帐户开设、HKMS系统账户权限开设')
+      : DEFAULT_GUIDE_TASKS;
+
+    // 重新编排 sort_order
+    const inserts = filteredTasks.map((t, idx) => ({
       employee_id: employeeId,
       task_name: t.task_name,
       executor_name: t.executor_name,
       task_category: t.task_category,
-      sort_order: t.sort_order,
+      sort_order: idx + 1,
       status: 'pending',
     }));
     await supabase.from('onboarding_guide_tasks').insert(inserts);
