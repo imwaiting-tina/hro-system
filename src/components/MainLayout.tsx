@@ -125,6 +125,22 @@ const MainLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuthStore();
+  const [openKeys, setOpenKeys] = React.useState<string[]>(['recruitment', 'onboarding', 'employment']);
+
+  // 根据当前路径自动展开对应的父菜单
+  React.useEffect(() => {
+    const path = location.pathname;
+    const segments = path.split('/').filter(Boolean);
+    if (segments.length > 0) {
+      const parentKey = segments[0];
+      setOpenKeys((prev) => {
+        if (!prev.includes(parentKey)) {
+          return [...prev, parentKey];
+        }
+        return prev;
+      });
+    }
+  }, [location.pathname]);
 
   if (!user) return null;
 
@@ -196,7 +212,8 @@ const MainLayout: React.FC = () => {
             mode="inline"
             theme="dark"
             selectedKeys={[location.pathname]}
-            defaultOpenKeys={['recruitment', 'onboarding']}
+            openKeys={openKeys}
+            onOpenChange={setOpenKeys}
             items={filteredMenu}
             onClick={handleMenuClick}
             style={{ height: '100%', borderRight: 0, paddingTop: 8 }}
