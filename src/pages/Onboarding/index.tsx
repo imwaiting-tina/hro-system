@@ -1,20 +1,26 @@
-import React, { useEffect, useState } from 'react';
-import { Tabs, Select, Typography, Space, Tag, Card, message } from 'antd';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Select, Typography, Space, Tag, Card, message } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
+import { Outlet, useOutletContext } from 'react-router-dom';
 import supabase from '../../utils/supabase';
-import OnboardingDocs from './OnboardingDocs';
-import OnboardingGuide from './OnboardingGuide';
-import AdminPrep from './AdminPrep';
-import StaffTraining from './StaffTraining';
-import EmployeeInfoForm from './EmployeeInfoForm';
 
 const { Title, Text } = Typography;
+
+export interface OnboardingContext {
+  selectedEmployeeId: string | undefined;
+  employees: any[];
+  announcementData: any;
+  onAnnouncementChange: (data: any) => void;
+  saveAnnouncement: () => Promise<void>;
+}
 
 const OnboardingPage: React.FC = () => {
   const [employees, setEmployees] = useState<any[]>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | undefined>();
-  const [activeTab, setActiveTab] = useState('docs');
-  const [announcementData, setAnnouncementData] = useState<any>({});
+  const [announcementData, setAnnouncementData] = useState<any>({
+    display_name: '', department_name: '', position_title: '',
+    onboard_date: '', avatar_url: '', self_intro: '', education_bg: '',
+  });
 
   useEffect(() => {
     fetchEmployees();
@@ -42,7 +48,6 @@ const OnboardingPage: React.FC = () => {
         education_bg: '',
       });
     }
-    // 尝试加载已有公告
     loadAnnouncement();
   }, [selectedEmployeeId]);
 
@@ -63,7 +68,7 @@ const OnboardingPage: React.FC = () => {
     }
   };
 
-  const saveAnnouncement = async () => {
+  const saveAnnouncement = useCallback(async () => {
     if (!selectedEmployeeId) return;
     const { data: existing } = await supabase.from('welcome_announcements')
       .select('id').eq('employee_id', selectedEmployeeId).maybeSingle();
@@ -79,45 +84,15 @@ const OnboardingPage: React.FC = () => {
       });
     }
     message.success('迎新公告已保存');
+  }, [selectedEmployeeId, announcementData]);
+
+  const context: OnboardingContext = {
+    selectedEmployeeId,
+    employees,
+    announcementData,
+    onAnnouncementChange: setAnnouncementData,
+    saveAnnouncement,
   };
-
-  const handleTabChange = (key: string) => setActiveTab(key);
-
-  const tabItems = [
-    {
-      key: 'docs',
-      label: '入职文件',
-      children: <OnboardingDocs employeeId={selectedEmployeeId} />,
-    },
-    {
-      key: 'guide',
-      label: '入职引导',
-      children: <OnboardingGuide employeeId={selectedEmployeeId} />,
-    },
-    {
-      key: 'admin',
-      label: '行政准备',
-      children: <AdminPrep
-        employeeId={selectedEmployeeId}
-        onJumpToAnnouncement={() => setActiveTab('training')}
-      />,
-    },
-    {
-      key: 'training',
-      label: '员工培训',
-      children: <StaffTraining
-        employeeId={selectedEmployeeId}
-        announcementData={announcementData}
-        onAnnouncementChange={setAnnouncementData}
-        onAnnouncementSave={saveAnnouncement}
-      />,
-    },
-    {
-      key: 'info',
-      label: '信息登记',
-      children: <EmployeeInfoForm employeeId={selectedEmployeeId} />,
-    },
-  ];
 
   return (
     <div>
@@ -149,14 +124,20 @@ const OnboardingPage: React.FC = () => {
           {selectedEmployeeId && (() => {
             const emp = employees.find((e: any) => e.id === selectedEmployeeId);
             return emp ? (
-              <Tag color="blue">{emp.employee_type === 'full_time' ? '全日制' : emp.employee_type === 'intern' ? '实习生' : emp.employee_type === 'retired_rehire' ? '退休返聘' : emp.employee_type === 'security' ? '保安' : emp.employee_type}</Tag>
+              <Tag color="blue">
+                {emp.employee_type === 'full_time' ? '全日制'
+                  : emp.employee_type === 'intern' ? '实习生'
+                  : emp.employee_type === 'retired_rehire' ? '退休返聘'
+                  : emp.employee_type === 'security' ? '保安'
+                  : emp.employee_type}
+              </Tag>
             ) : null;
           })()}
         </Space>
       </Card>
 
-      {/* Tab页 */}
-      <Tabs activeKey={activeTab} onChange={handleTabChange} items={tabItems} />
+      {/* 子路由内容（5个模块） */}
+      <Outlet context={context} />
     </div>
   );
 };

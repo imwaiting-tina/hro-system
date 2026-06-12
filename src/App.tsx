@@ -11,6 +11,11 @@ import ResumeLibPage from './pages/Recruitment/ResumeLib';
 import InterviewPage from './pages/Recruitment/Interview';
 import OfferPage from './pages/Recruitment/Offer';
 import OnboardingPage from './pages/Onboarding';
+import OnboardingDocs from './pages/Onboarding/OnboardingDocs';
+import OnboardingGuide from './pages/Onboarding/OnboardingGuide';
+import AdminPrep from './pages/Onboarding/AdminPrep';
+import StaffTraining from './pages/Onboarding/StaffTraining';
+import EmployeeInfoForm from './pages/Onboarding/EmployeeInfoForm';
 import EmploymentPage from './pages/Employment';
 import DailyPage from './pages/Daily';
 import ResignationPage from './pages/Resignation';
@@ -71,7 +76,14 @@ const App: React.FC = () => {
               <Route path="recruitment/resume" element={<ResumeLibPage />} />
               <Route path="recruitment/interview" element={<InterviewPage />} />
               <Route path="recruitment/offer" element={<OfferPage />} />
-              <Route path="onboarding" element={<OnboardingPage />} />
+              <Route path="onboarding" element={<OnboardingPage />}>
+                <Route index element={<Navigate to="/onboarding/docs" replace />} />
+                <Route path="docs" element={<OnboardingDocs />} />
+                <Route path="guide" element={<OnboardingGuide />} />
+                <Route path="admin" element={<AdminPrep />} />
+                <Route path="training" element={<StaffTraining />} />
+                <Route path="info" element={<EmployeeInfoForm />} />
+              </Route>
               <Route path="employment" element={<EmploymentPage />} />
               <Route path="daily" element={<DailyPage />} />
               <Route path="resignation" element={<ResignationPage />} />

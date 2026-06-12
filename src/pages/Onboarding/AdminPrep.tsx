@@ -6,12 +6,11 @@ import { useAuthStore } from '../../stores/authStore';
 
 const { Title, Text } = Typography;
 
-interface Props {
-  employeeId?: string;
-  onJumpToAnnouncement?: () => void;
-}
+import { useOutletContext } from 'react-router-dom';
+import type { OnboardingContext } from './index';
 
-const AdminPrep: React.FC<Props> = ({ employeeId, onJumpToAnnouncement }) => {
+const AdminPrep: React.FC = () => {
+  const { selectedEmployeeId: employeeId } = useOutletContext<OnboardingContext>();
   const user = useAuthStore((s) => s.user);
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -91,11 +90,10 @@ const AdminPrep: React.FC<Props> = ({ employeeId, onJumpToAnnouncement }) => {
         { key: 'dingtalk_added', label: '钉钉添加员工、设置考勤组、协助首次打卡', value: data?.dingtalk_added },
         { key: 'wechat_group_added', label: '拉入微信工作群、发送迎新公告', value: data?.wechat_group_added },
       ],
-      extra: onJumpToAnnouncement && (
-        <Button size="small" type="link" onClick={onJumpToAnnouncement}
-          style={{ padding: 0, marginTop: 4 }}>
-          编辑迎新公告 →
-        </Button>
+      extra: (
+        <span style={{ fontSize: 12, color: '#8c8c8c', marginTop: 4, display: 'block' }}>
+          迎新公告请前往「员工培训」模块编辑
+        </span>
       ),
     },
   ];

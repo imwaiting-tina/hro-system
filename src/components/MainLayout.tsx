@@ -45,10 +45,17 @@ const menuConfig = [
     ],
   },
   {
-    key: '/onboarding',
+    key: 'onboarding',
     icon: <UserAddOutlined />,
     label: '入职管理',
     roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head'] as UserRole[],
+    children: [
+      { key: '/onboarding/docs', icon: <FileTextOutlined />, label: '入职文件' },
+      { key: '/onboarding/guide', icon: <ScheduleOutlined />, label: '入职引导' },
+      { key: '/onboarding/admin', icon: <SettingOutlined />, label: '行政准备' },
+      { key: '/onboarding/training', icon: <TeamOutlined />, label: '员工培训' },
+      { key: '/onboarding/info', icon: <IdcardOutlined />, label: '信息登记' },
+    ],
   },
   {
     key: '/employment',
@@ -182,7 +189,7 @@ const MainLayout: React.FC = () => {
             mode="inline"
             theme="dark"
             selectedKeys={[location.pathname]}
-            defaultOpenKeys={['recruitment']}
+            defaultOpenKeys={['recruitment', 'onboarding']}
             items={filteredMenu}
             onClick={handleMenuClick}
             style={{ height: '100%', borderRight: 0, paddingTop: 8 }}

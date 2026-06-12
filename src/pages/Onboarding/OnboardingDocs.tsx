@@ -31,11 +31,11 @@ const docStatusMap: Record<DocStatus, { label: string; color: string }> = {
   archived: { label: '已归档', color: 'success' },
 };
 
-interface Props {
-  employeeId?: string;
-}
+import { useOutletContext } from 'react-router-dom';
+import type { OnboardingContext } from './index';
 
-const OnboardingDocs: React.FC<Props> = ({ employeeId }) => {
+const OnboardingDocs: React.FC = () => {
+  const { selectedEmployeeId: employeeId } = useOutletContext<OnboardingContext>();
   const user = useAuthStore((s) => s.user);
   const [data, setData] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);

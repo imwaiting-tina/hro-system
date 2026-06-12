@@ -6,6 +6,8 @@ import {
 import { UploadOutlined, SaveOutlined } from '@ant-design/icons';
 import supabase from '../../utils/supabase';
 import dayjs from 'dayjs';
+import { useOutletContext } from 'react-router-dom';
+import type { OnboardingContext } from './index';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -114,7 +116,8 @@ const employeeTypeOptions = [
 // 职级
 const gradeOptions = ['L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8', 'L9'];
 
-const EmployeeInfoForm: React.FC<Props> = ({ employeeId }) => {
+const EmployeeInfoForm: React.FC = () => {
+  const { selectedEmployeeId: employeeId } = useOutletContext<OnboardingContext>();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [employee, setEmployee] = useState<any>(null);

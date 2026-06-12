@@ -8,6 +8,8 @@ import {
 } from '@ant-design/icons';
 import supabase from '../../utils/supabase';
 import WelcomeCard from './WelcomeCard';
+import { useOutletContext } from 'react-router-dom';
+import type { OnboardingContext } from './index';
 
 const { Title, Text } = Typography;
 
@@ -32,16 +34,13 @@ const TRAINING_MODULES = [
     content: '8项责任 - 可勾选清单' },
 ];
 
-interface Props {
-  employeeId?: string;
-  announcementData: any;
-  onAnnouncementChange: (data: any) => void;
-  onAnnouncementSave: () => void;
-}
-
-const StaffTraining: React.FC<Props> = ({
-  employeeId, announcementData, onAnnouncementChange, onAnnouncementSave,
-}) => {
+const StaffTraining: React.FC = () => {
+  const {
+    selectedEmployeeId: employeeId,
+    announcementData,
+    onAnnouncementChange,
+    saveAnnouncement,
+  } = useOutletContext<OnboardingContext>();
   const [progress, setProgress] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentModule, setCurrentModule] = useState<number>(1);
@@ -192,7 +191,7 @@ const StaffTraining: React.FC<Props> = ({
             <Button size="small" onClick={() => setShowAnnouncementEdit(true)}>
               编辑公告
             </Button>
-            <Button size="small" type="primary" onClick={onAnnouncementSave}>
+            <Button size="small" type="primary" onClick={saveAnnouncement}>
               保存发布
             </Button>
           </Space>
@@ -216,7 +215,7 @@ const StaffTraining: React.FC<Props> = ({
         title="编辑迎新公告"
         open={showAnnouncementEdit}
         onCancel={() => setShowAnnouncementEdit(false)}
-        onOk={() => { onAnnouncementSave(); setShowAnnouncementEdit(false); }}
+        onOk={() => { saveAnnouncement(); setShowAnnouncementEdit(false); }}
         width={600}
       >
         <Row gutter={[16, 12]}>

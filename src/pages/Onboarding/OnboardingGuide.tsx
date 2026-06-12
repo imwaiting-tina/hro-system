@@ -43,11 +43,11 @@ const executorColors: Record<string, string> = {
   '社保部': '#13c2c2',
 };
 
-interface Props {
-  employeeId?: string;
-}
+import { useOutletContext } from 'react-router-dom';
+import type { OnboardingContext } from './index';
 
-const OnboardingGuide: React.FC<Props> = ({ employeeId }) => {
+const OnboardingGuide: React.FC = () => {
+  const { selectedEmployeeId: employeeId } = useOutletContext<OnboardingContext>();
   const user = useAuthStore((s) => s.user);
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
