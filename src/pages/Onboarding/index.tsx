@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Tabs, Select, Typography, Space, Tag, Card } from 'antd';
+import { Tabs, Select, Typography, Space, Tag, Card, message } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import supabase from '../../utils/supabase';
 import OnboardingDocs from './OnboardingDocs';

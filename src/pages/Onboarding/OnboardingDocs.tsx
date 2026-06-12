@@ -113,16 +113,16 @@ const OnboardingDocs: React.FC<Props> = ({ employeeId }) => {
         <Space size="small">
           <Button size="small" icon={<EyeOutlined />}
             onClick={() => { setSelectedRecord(record); setDetailVisible(true); }}>详情</Button>
-          {canEdit(user!.role) && record.status === 'pending' && (
+          {user && canEdit(user.role) && record.status === 'pending' && (
             <Button size="small" onClick={() => handleStatusChange(record.id, 'pending_sign')}>准备签署</Button>
           )}
-          {record.need_seal && record.status === 'pending_sign' && canEdit(user!.role) && (
+          {record.need_seal && record.status === 'pending_sign' && user && canEdit(user.role) && (
             <Button size="small" type="primary" onClick={() => handleStatusChange(record.id, 'pending_seal')}>申请用印</Button>
           )}
-          {record.status === 'pending_seal' && canEdit(user!.role) && (
+          {record.status === 'pending_seal' && user && canEdit(user.role) && (
             <Button size="small" type="primary" onClick={() => handleStatusChange(record.id, 'sealed')}>确认用印</Button>
           )}
-          {record.status === 'sealed' && canEdit(user!.role) && (
+          {record.status === 'sealed' && user && canEdit(user.role) && (
             <Button size="small" onClick={() => handleStatusChange(record.id, 'archived')}>归档</Button>
           )}
         </Space>
@@ -157,7 +157,7 @@ const OnboardingDocs: React.FC<Props> = ({ employeeId }) => {
       <Card>
         <div className="table-toolbar">
           <Text strong>共 {data.length} 条记录</Text>
-          {canEdit(user!.role) && (
+          {user && canEdit(user.role) && (
             <Button type="primary" icon={<PlusOutlined />} onClick={() => {
               form.resetFields();
               if (employeeId) form.setFieldsValue({ employee_id: employeeId });
