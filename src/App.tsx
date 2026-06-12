@@ -16,6 +16,7 @@ import OnboardingGuide from './pages/Onboarding/OnboardingGuide';
 import AdminPrep from './pages/Onboarding/AdminPrep';
 import StaffTraining from './pages/Onboarding/StaffTraining';
 import EmployeeInfoForm from './pages/Onboarding/EmployeeInfoForm';
+import WelcomeAnnouncement from './pages/Onboarding/WelcomeAnnouncement';
 import EmploymentPage from './pages/Employment';
 import EvaluationPage from './pages/Employment/Evaluation';
 import RenewalPage from './pages/Employment/Renewal';
@@ -87,6 +88,7 @@ const App: React.FC = () => {
                 <Route path="admin" element={<AdminPrep />} />
                 <Route path="training" element={<StaffTraining />} />
                 <Route path="info" element={<EmployeeInfoForm />} />
+                <Route path="announcement" element={<WelcomeAnnouncement />} />
               </Route>
               <Route path="employment" element={<EmploymentPage />}>
                 <Route index element={<Navigate to="/employment/evaluation" replace />} />

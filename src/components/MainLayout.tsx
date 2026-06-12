@@ -56,6 +56,7 @@ const menuConfig = [
       { key: '/onboarding/admin', icon: <SettingOutlined />, label: '行政准备' },
       { key: '/onboarding/training', icon: <TeamOutlined />, label: '员工培训' },
       { key: '/onboarding/info', icon: <IdcardOutlined />, label: '信息登记' },
+      { key: '/onboarding/announcement', icon: <SendOutlined />, label: '迎新公告' },
     ],
   },
   {
