@@ -17,6 +17,10 @@ import AdminPrep from './pages/Onboarding/AdminPrep';
 import StaffTraining from './pages/Onboarding/StaffTraining';
 import EmployeeInfoForm from './pages/Onboarding/EmployeeInfoForm';
 import EmploymentPage from './pages/Employment';
+import EvaluationPage from './pages/Employment/Evaluation';
+import RenewalPage from './pages/Employment/Renewal';
+import TransferPage from './pages/Employment/Transfer';
+import EmployeeListPage from './pages/Employment/EmployeeList';
 import DailyPage from './pages/Daily';
 import ResignationPage from './pages/Resignation';
 import ApprovalPage from './pages/Approval';
@@ -84,7 +88,13 @@ const App: React.FC = () => {
                 <Route path="training" element={<StaffTraining />} />
                 <Route path="info" element={<EmployeeInfoForm />} />
               </Route>
-              <Route path="employment" element={<EmploymentPage />} />
+              <Route path="employment" element={<EmploymentPage />}>
+                <Route index element={<Navigate to="/employment/evaluation" replace />} />
+                <Route path="evaluation" element={<EvaluationPage />} />
+                <Route path="renewal" element={<RenewalPage />} />
+                <Route path="transfer" element={<TransferPage />} />
+                <Route path="employees" element={<EmployeeListPage />} />
+              </Route>
               <Route path="daily" element={<DailyPage />} />
               <Route path="resignation" element={<ResignationPage />} />
               <Route path="approval" element={<ApprovalPage />} />

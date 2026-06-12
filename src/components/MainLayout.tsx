@@ -16,6 +16,7 @@ import {
   SafetyOutlined,
   DownOutlined,
   UserOutlined,
+  SwapOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
@@ -58,10 +59,16 @@ const menuConfig = [
     ],
   },
   {
-    key: '/employment',
+    key: 'employment',
     icon: <IdcardOutlined />,
     label: '在职管理',
     roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head'] as UserRole[],
+    children: [
+      { key: '/employment/evaluation', icon: <AuditOutlined />, label: '试用期/实习评估' },
+      { key: '/employment/renewal', icon: <FileTextOutlined />, label: '续签管理' },
+      { key: '/employment/transfer', icon: <SwapOutlined />, label: '员工流动' },
+      { key: '/employment/employees', icon: <TeamOutlined />, label: '员工档案' },
+    ],
   },
   {
     key: '/daily',
