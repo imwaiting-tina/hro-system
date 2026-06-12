@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Button, Tag, Typography, Steps, Space, message, Collapse, Row, Col, Progress, Alert, Table, Timeline, Divider } from 'antd';
+import { Card, Button, Tag, Typography, Steps, Space, message, Collapse, Row, Col, Progress, Alert, Table, Timeline, Divider, Input } from 'antd';
 import {
   CheckCircleOutlined, ReadOutlined, TrophyOutlined,
   BankOutlined, HistoryOutlined, SafetyCertificateOutlined,
   FileProtectOutlined, TeamOutlined, DollarOutlined,
   AuditOutlined, FileTextOutlined, MailOutlined,
   PhoneOutlined, EnvironmentOutlined, ClockCircleOutlined,
-  SendOutlined, EyeOutlined,
+  SendOutlined, EyeOutlined, SaveOutlined, UploadOutlined,
 } from '@ant-design/icons';
 import supabase from '../../utils/supabase';
 import { useOutletContext } from 'react-router-dom';
+import WelcomeCard from './WelcomeCard';
 import type { OnboardingContext } from './index';
 
 const { Title, Text, Paragraph } = Typography;
@@ -346,10 +347,17 @@ const StaffTraining: React.FC = () => {
   const {
     selectedEmployeeId: employeeId,
     selectedEmployee,
+    announcementData: ctxAnnouncementData,
+    onAnnouncementChange: setAnnouncementData,
+    saveAnnouncement,
   } = useOutletContext<OnboardingContext>();
   const [progress, setProgress] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeModule, setActiveModule] = useState<string | null>(null);
+  const [localAnnouncement, setLocalAnnouncement] = useState<any>(ctxAnnouncementData || {
+    display_name: '', department_name: '', position_title: '',
+    onboard_date: '', avatar_url: '', self_intro: '', education_bg: '',
+  });
 
   const fetchProgress = async () => {
     if (!employeeId) return;
@@ -377,6 +385,45 @@ const StaffTraining: React.FC = () => {
   };
 
   useEffect(() => { fetchProgress(); }, [employeeId]);
+
+  // 同步 context 中的公告数据
+  useEffect(() => {
+    if (ctxAnnouncementData) {
+      setLocalAnnouncement(ctxAnnouncementData);
+    }
+  }, [ctxAnnouncementData, employeeId]);
+
+  const handleAnnouncementChange = (field: string, value: string) => {
+    const updated = { ...localAnnouncement, [field]: value };
+    setLocalAnnouncement(updated);
+    if (setAnnouncementData) setAnnouncementData(updated);
+  };
+
+  const handleSaveAnnouncement = async () => {
+    if (!employeeId) return;
+    if (saveAnnouncement) await saveAnnouncement();
+    else {
+      const { data: existing } = await supabase.from('welcome_announcements')
+        .select('id').eq('employee_id', employeeId).maybeSingle();
+      if (existing) {
+        await supabase.from('welcome_announcements').update(localAnnouncement).eq('id', existing.id);
+      } else {
+        await supabase.from('welcome_announcements').insert({
+          ...localAnnouncement, employee_id: employeeId, status: 'draft',
+        });
+      }
+      message.success('迎新公告已保存');
+    }
+  };
+
+  const handlePublishAnnouncement = async () => {
+    await handleSaveAnnouncement();
+    if (!employeeId) return;
+    await supabase.from('welcome_announcements')
+      .update({ status: 'published', published_at: new Date().toISOString() })
+      .eq('employee_id', employeeId);
+    message.success('迎新公告已发布！');
+  };
 
   const markAsRead = async (moduleOrder: number) => {
     const mod = progress.find((p: any) => p.module_order === moduleOrder);
@@ -535,6 +582,100 @@ const StaffTraining: React.FC = () => {
           <Text strong>《HRS-002-新员工入职培训-v20250324》</Text>
           <Tag color="blue">2025年3月24日版</Tag>
         </Space>
+      </Card>
+
+      {/* ---- 迎新公告 ---- */}
+      <Card style={{ marginTop: 16 }}>
+        <div className="page-header" style={{ paddingTop: 0 }}>
+          <Title level={4}>迎新公告</Title>
+          <Text type="secondary">为新员工生成欢迎卡片，可发布到公司群或邮件</Text>
+        </div>
+
+        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+          {/* 左侧：编辑表单 */}
+          <div style={{ flex: 1, minWidth: 320 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12 }}>姓名</Text>
+                <Input
+                  value={localAnnouncement.display_name}
+                  onChange={(e) => handleAnnouncementChange('display_name', e.target.value)}
+                  placeholder="新员工姓名"
+                  style={{ marginTop: 4 }}
+                />
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12 }}>部门</Text>
+                <Input
+                  value={localAnnouncement.department_name}
+                  onChange={(e) => handleAnnouncementChange('department_name', e.target.value)}
+                  placeholder="如：技术部"
+                  style={{ marginTop: 4 }}
+                />
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12 }}>岗位</Text>
+                <Input
+                  value={localAnnouncement.position_title}
+                  onChange={(e) => handleAnnouncementChange('position_title', e.target.value)}
+                  placeholder="如：Java开发工程师"
+                  style={{ marginTop: 4 }}
+                />
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12 }}>入职日期</Text>
+                <Input
+                  value={localAnnouncement.onboard_date}
+                  onChange={(e) => handleAnnouncementChange('onboard_date', e.target.value)}
+                  placeholder="如：2026-06-15"
+                  style={{ marginTop: 4 }}
+                />
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12 }}>学历背景</Text>
+                <Input
+                  value={localAnnouncement.education_bg}
+                  onChange={(e) => handleAnnouncementChange('education_bg', e.target.value)}
+                  placeholder="如：复旦大学 计算机 本科"
+                  style={{ marginTop: 4 }}
+                />
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12 }}>头像URL</Text>
+                <Input
+                  value={localAnnouncement.avatar_url}
+                  onChange={(e) => handleAnnouncementChange('avatar_url', e.target.value)}
+                  placeholder="头像图片URL（可选）"
+                  style={{ marginTop: 4 }}
+                />
+              </div>
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <Text type="secondary" style={{ fontSize: 12 }}>个人简介/一句话介绍</Text>
+              <Input.TextArea
+                value={localAnnouncement.self_intro}
+                onChange={(e) => handleAnnouncementChange('self_intro', e.target.value)}
+                placeholder="如：热爱技术，喜欢骑行和摄影"
+                rows={2}
+                style={{ marginTop: 4 }}
+              />
+            </div>
+            <Space style={{ marginTop: 12 }}>
+              <Button type="primary" icon={<SaveOutlined />} onClick={handleSaveAnnouncement}>
+                保存草稿
+              </Button>
+              <Button icon={<SendOutlined />} onClick={handlePublishAnnouncement}>
+                发布公告
+              </Button>
+            </Space>
+          </div>
+
+          {/* 右侧：预览卡片 */}
+          <div style={{ flex: '0 0 auto', paddingTop: 8 }}>
+            <Text type="secondary" style={{ display: 'block', marginBottom: 12, fontSize: 12 }}>预览效果：</Text>
+            <WelcomeCard data={localAnnouncement} />
+          </div>
+        </div>
       </Card>
     </div>
   );
