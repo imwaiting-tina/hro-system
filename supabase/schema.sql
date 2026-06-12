@@ -510,12 +510,13 @@ CREATE TYPE onboarding_doc_type AS ENUM (
 );
 
 CREATE TYPE doc_status AS ENUM (
-  'pending',         -- 待准备
-  'pending_sign',    -- 待签署
-  'pending_seal',    -- 待用印
-  'sealed',          -- 已用印
-  'delivered',       -- 已交付员工
-  'archived'         -- 已归档
+  'pending',              -- 待准备
+  'pending_sign',         -- 待签署
+  'pending_seal',         -- 待用印
+  'sealed',               -- 已用印（一式两份）
+  'company_archived',     -- 公司联已归档
+  'returned_to_employee', -- 员工联已归还本人
+  'archived'              -- 全部归档（一式两份均完成）
 );
 
 CREATE TABLE onboarding_documents (
@@ -538,6 +539,14 @@ CREATE TABLE onboarding_documents (
   seal_approved_by UUID REFERENCES users(id),
   seal_approved_at TIMESTAMPTZ,
   sealed_at TIMESTAMPTZ,
+
+  -- 一式两份信息
+  copy_count INT DEFAULT 2,              -- 份数（默认一式两份）
+  company_copy_status VARCHAR(50) DEFAULT 'pending',  -- 公司联状态：pending/sealed/archived
+  employee_copy_status VARCHAR(50) DEFAULT 'pending', -- 员工联状态：pending/sealed/returned
+  company_copy_archived_at TIMESTAMPTZ,  -- 公司联归档时间
+  employee_copy_returned_at TIMESTAMPTZ, -- 员工联归还本人时间
+  returned_to_employee BOOLEAN DEFAULT false,  -- 是否已归还一份给本人
 
   -- 状态
   status doc_status DEFAULT 'pending',

@@ -46,7 +46,8 @@ export type OnboardingDocType =
   | 'service_agreement' | 'security_contract' | 'employee_handbook' | 'other';
 
 export type DocStatus =
-  | 'pending' | 'pending_sign' | 'pending_seal' | 'sealed' | 'delivered' | 'archived';
+  | 'pending' | 'pending_sign' | 'pending_seal' | 'sealed'
+  | 'company_archived' | 'returned_to_employee' | 'archived';
 
 export type OnboardingGuideStatus = 'pending' | 'in_progress' | 'completed';
 
