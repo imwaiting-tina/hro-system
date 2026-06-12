@@ -33,7 +33,7 @@ const WelcomeCard: React.FC<Props> = ({ data }) => {
       {/* 头部 */}
       <div style={{
         background: 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)',
-        padding: '24px 24px 16px',
+        padding: '24px 24px 40px',
         textAlign: 'center',
         color: '#fff',
       }}>
@@ -46,7 +46,7 @@ const WelcomeCard: React.FC<Props> = ({ data }) => {
       </div>
 
       {/* 头像 + 姓名 */}
-      <div style={{ textAlign: 'center', marginTop: -30, marginBottom: 12 }}>
+      <div style={{ textAlign: 'center', marginTop: -36, marginBottom: 8 }}>
         {data.avatar_url ? (
           <Avatar src={data.avatar_url} size={72}
             style={{ border: '3px solid #fff', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }} />
