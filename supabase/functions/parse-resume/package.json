@@ -1,0 +1,5 @@
+{
+  "name": "parse-resume",
+  "version": "1.0.0",
+  "description": "解析上传的简历文件，提取候选人信息字段"
+}
