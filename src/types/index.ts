@@ -48,6 +48,55 @@ export type OnboardingDocType =
 export type DocStatus =
   | 'pending' | 'pending_sign' | 'pending_seal' | 'sealed' | 'delivered' | 'archived';
 
+export type OnboardingGuideStatus = 'pending' | 'in_progress' | 'completed';
+
+export interface OnboardingGuideTask {
+  id: string;
+  employee_id: string;
+  task_name: string;
+  task_category: string;
+  executor_name: string;
+  status: OnboardingGuideStatus;
+  completed_at: string;
+  completed_by: string;
+  sort_order: number;
+  notes: string;
+}
+
+export interface WelcomeAnnouncement {
+  id: string;
+  employee_id: string;
+  display_name: string;
+  department_name: string;
+  position_title: string;
+  onboard_date: string;
+  avatar_url: string;
+  self_intro: string;
+  education_bg: string;
+  status: 'draft' | 'pending_review' | 'approved' | 'published';
+  reviewed_by: string;
+  published_at: string;
+}
+
+export interface TrainingModuleProgress {
+  id: string;
+  employee_id: string;
+  module_key: string;
+  module_name: string;
+  module_order: number;
+  is_read: boolean;
+  read_at: string;
+}
+
+export interface EmployeeDeclarations {
+  q1_infectious: boolean;
+  q2_noncompete: boolean;
+  q3_misconduct: boolean;
+  q4_shift_work: boolean;
+  q5_rules_accept: boolean;
+  q6_other_employment: boolean;
+}
+
 export type EvaluationStatus =
   | 'pending_employee' | 'pending_dept' | 'pending_bu' | 'pending_hr'
   | 'pending_final' | 'completed' | 'rejected';

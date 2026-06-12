@@ -168,6 +168,63 @@ const ApprovalList: React.FC<{ user: any; filter: string }> = ({ user, filter })
       });
     }
 
+    // ========== 入职审批（从 approval_records 表查询） ==========
+    const { data: onboardingApprovals } = await supabase
+      .from('approval_records')
+      .select('*')
+      .eq('module', 'onboarding')
+      .order('created_at', { ascending: false });
+    if (onboardingApprovals) {
+      // 批量查询关联的入职文件数据
+      const onboardingIds = onboardingApprovals.map((a: any) => a.record_id);
+      if (onboardingIds.length > 0) {
+        const { data: docs } = await supabase
+          .from('onboarding_documents')
+          .select('id,employee_id,doc_type,doc_name')
+          .in('id', onboardingIds);
+        const docMap: Record<string, any> = {};
+        if (docs) docs.forEach((d: any) => { docMap[d.id] = d; });
+
+        // 批量查询员工
+        const employeeIds = [...new Set(docs?.map((d: any) => d.employee_id) || [])];
+        const empMap: Record<string, string> = {};
+        if (employeeIds.length > 0) {
+          const { data: emps } = await supabase
+            .from('employees').select('id,chinese_name').in('id', employeeIds);
+          if (emps) emps.forEach((e: any) => { empMap[e.id] = e.chinese_name; });
+        }
+
+        const docTypeLabels: Record<string, string> = {
+          recruitment_approval: '录用审批单',
+          intern_approval: '应届生实习录用表',
+          rehire_approval: '劳务录用审批单',
+          labor_contract: '劳动合同',
+          internship_agreement: '实习协议',
+          service_agreement: '劳务协议',
+          employee_handbook: '员工手册',
+        };
+
+        onboardingApprovals.forEach((a: any) => {
+          const doc = docMap[a.record_id];
+          const empName = empMap[doc?.employee_id] || '未知员工';
+          const docLabel = docTypeLabels[doc?.doc_type] || doc?.doc_type || '入职文件';
+
+          allItems.push({
+            id: a.id,
+            approvalId: a.id,
+            module: 'onboarding',
+            moduleName: '入职管理',
+            title: `${docLabel} - ${empName}`,
+            status: a.status,
+            step: a.step_name,
+            created_at: a.created_at,
+            rawData: a,
+            docData: doc,
+          });
+        });
+      }
+    }
+
     // ========== 离职审批 ==========
     const { data: resignations } = await supabase
       .from('resignations')
@@ -333,7 +390,7 @@ const ApprovalList: React.FC<{ user: any; filter: string }> = ({ user, filter })
     fetchData();
   };
 
-  // ========== 通用审批（招聘/在职/离职） ==========
+  // ========== 通用审批（招聘/在职/入职/离职） ==========
   const handleApprove = async (record: any) => {
     if (record.module === 'interview') {
       await handleInterviewApprove(record);
@@ -350,6 +407,21 @@ const ApprovalList: React.FC<{ user: any; filter: string }> = ({ user, filter })
         status: newStatus,
         ...(rawData.status === 'pending_final' ? { final_approved_at: new Date().toISOString() } : {}),
       }).eq('id', rawData.id);
+    } else if (record.module === 'onboarding') {
+      // 入职审批：更新 approval_records 状态
+      await supabase.from('approval_records').update({
+        status: 'approved',
+        opinion: opinion || '审批通过',
+        approved_at: new Date().toISOString(),
+      }).eq('id', rawData.id);
+      // 同时更新入职文件的用印审批状态
+      if (record.docData) {
+        await supabase.from('onboarding_documents').update({
+          seal_approved: true,
+          seal_approved_by: user?.id,
+          seal_approved_at: new Date().toISOString(),
+        }).eq('id', record.docData.id);
+      }
     } else if (record.module === 'employment') {
       let newStatus = rawData.status;
       if (rawData.status === 'pending_bu') newStatus = 'pending_hr';
@@ -374,6 +446,12 @@ const ApprovalList: React.FC<{ user: any; filter: string }> = ({ user, filter })
     const { rawData } = record;
     if (record.module === 'recruitment') {
       await supabase.from('recruitment_requests').update({ status: 'rejected' }).eq('id', rawData.id);
+    } else if (record.module === 'onboarding') {
+      await supabase.from('approval_records').update({
+        status: 'rejected',
+        opinion: opinion || '审批驳回',
+        approved_at: new Date().toISOString(),
+      }).eq('id', rawData.id);
     }
     message.success('已驳回');
     setDetailVisible(false);
