@@ -80,6 +80,7 @@ const menuConfig = [
     children: [
       { key: '/daily', icon: <ScheduleOutlined />, label: '日常事务' },
       { key: '/daily/retirement', icon: <TeamOutlined />, label: '退休管理' },
+      { key: '/daily/insurance', icon: <SafetyOutlined />, label: '保险模块' },
     ],
   },
   {

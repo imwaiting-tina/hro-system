@@ -25,6 +25,7 @@ import DailyPage from './pages/Daily';
 import ResignationPage from './pages/Resignation';
 import ApprovalPage from './pages/Approval';
 import RetirementPage from './pages/Retirement';
+import InsurancePage from './pages/Insurance';
 
 // 路由守卫
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -98,6 +99,7 @@ const App: React.FC = () => {
               </Route>
               <Route path="daily" element={<DailyPage />} />
               <Route path="daily/retirement" element={<RetirementPage />} />
+              <Route path="daily/insurance" element={<InsurancePage />} />
               <Route path="resignation" element={<ResignationPage />} />
               <Route path="approval" element={<ApprovalPage />} />
             </Route>
