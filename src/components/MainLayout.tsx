@@ -81,7 +81,7 @@ const menuConfig = [
   {
     key: '/resignation',
     icon: <LogoutOutlined />,
-    label: '离职板块',
+    label: '离职管理',
     roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head'] as UserRole[],
   },
   {
