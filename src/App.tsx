@@ -27,6 +27,13 @@ import ApprovalPage from './pages/Approval';
 import RetirementPage from './pages/Retirement';
 import InsurancePage from './pages/Insurance';
 
+// 离职管理V3 - Offboarding模块
+import OffboardingPage from './pages/Offboarding';
+import OffboardingListPage from './pages/Offboarding/OffboardingList';
+import OffboardingNewPage from './pages/Offboarding/OffboardingNew';
+import OffboardingHandoverPage from './pages/Offboarding/OffboardingHandover';
+import OffboardingSettlementPage from './pages/Offboarding/OffboardingSettlement';
+
 // 路由守卫
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, loading } = useAuthStore();
@@ -101,6 +108,13 @@ const App: React.FC = () => {
               <Route path="daily/retirement" element={<RetirementPage />} />
               <Route path="daily/insurance" element={<InsurancePage />} />
               <Route path="resignation" element={<ResignationPage />} />
+              <Route path="offboarding" element={<OffboardingPage />}>
+                <Route index element={<Navigate to="/offboarding/list" replace />} />
+                <Route path="list" element={<OffboardingListPage />} />
+                <Route path="new" element={<OffboardingNewPage />} />
+                <Route path=":id/handover" element={<OffboardingHandoverPage />} />
+                <Route path=":id/settlement" element={<OffboardingSettlementPage />} />
+              </Route>
               <Route path="approval" element={<ApprovalPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/login" replace />} />

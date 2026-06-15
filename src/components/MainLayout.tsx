@@ -84,10 +84,14 @@ const menuConfig = [
     ],
   },
   {
-    key: '/resignation',
+    key: 'offboarding',
     icon: <LogoutOutlined />,
     label: '离职管理',
-    roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head'] as UserRole[],
+    roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head', 'employee'] as UserRole[],
+    children: [
+      { key: '/offboarding/list', icon: <FileTextOutlined />, label: '离职列表', roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head'] as UserRole[] },
+      { key: '/offboarding/new', icon: <SendOutlined />, label: '发起离职', roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head', 'employee'] as UserRole[] },
+    ],
   },
   {
     key: '/approval',
@@ -132,7 +136,7 @@ const MainLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuthStore();
-  const [openKeys, setOpenKeys] = React.useState<string[]>(['recruitment', 'onboarding', 'employment']);
+  const [openKeys, setOpenKeys] = React.useState<string[]>(['recruitment', 'onboarding', 'employment', 'offboarding']);
   const [collapsed, setCollapsed] = React.useState(false);
 
   // 根据当前路径自动展开对应的父菜单

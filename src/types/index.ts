@@ -108,6 +108,83 @@ export type RenewalStatus =
 export type ResignationStatus =
   | 'pending' | 'in_progress' | 'pending_handover' | 'pending_clearance' | 'completed' | 'cancelled';
 
+// ============================================================
+// 离职管理V3 - Offboarding 类型定义
+// ============================================================
+
+export type OffboardingInitiatorType = 'employee' | 'company';
+export type OffboardingType = 'resignation' | 'termination' | 'retirement';
+export type OffboardingCaseStatus = 'pending' | 'approved' | 'handovering' | 'settled' | 'closed';
+export type HandoverItemType = 'asset' | 'knowledge' | 'finance';
+export type HandoverItemStatus = 'pending' | 'confirmed';
+
+export interface OffboardingCase {
+  id: string;
+  employee_id: string;
+  initiator_type: OffboardingInitiatorType;
+  type: OffboardingType;
+  status: OffboardingCaseStatus;
+  reason_code: string;
+  reason_detail: string;
+  last_working_day: string;
+  submitted_at: string;
+  approved_at: string;
+  approver_id: string;
+  compensation_amount: number;
+  settlement_data: OffboardingSettlement | null;
+  settlement_by: string;
+  settled_at: string;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+  // joined fields
+  employee_name?: string;
+  employee_department?: string;
+  employee_position?: string;
+  employee_no?: string;
+  approver_name?: string;
+}
+
+export interface OffboardingHandoverItem {
+  id: string;
+  case_id: string;
+  item_type: HandoverItemType;
+  description: string;
+  assigned_to: string;
+  status: HandoverItemStatus;
+  confirmed_at: string;
+  confirmed_by: string;
+  sort_order: number;
+  created_at: string;
+  // joined
+  assigned_to_name?: string;
+  confirmed_by_name?: string;
+}
+
+export interface OffboardingExitInterview {
+  id: string;
+  case_id: string;
+  interviewer_id: string;
+  interview_date: string;
+  rating: number;
+  feedback_text: string;
+  rehire_eligible: boolean;
+  created_at: string;
+  // joined
+  interviewer_name?: string;
+}
+
+export interface OffboardingSettlement {
+  final_salary: number;
+  unused_annual_leave_days: number;
+  annual_leave_compensation: number;
+  service_years: number;
+  monthly_salary: number;
+  n_plus_one: number;
+  compensation_amount: number;
+  total_settlement: number;
+}
+
 // 导航菜单项
 export interface MenuItem {
   key: string;
