@@ -1,18 +1,21 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import {
   Card, Typography, Table, Tag, Button, Space, Row, Col, Statistic, Modal, Form,
-  Input, Select, DatePicker, InputNumber, message, Popconfirm, Descriptions, Tooltip
+  Input, Select, DatePicker, InputNumber, message, Popconfirm, Descriptions, Tooltip,
+  Tabs, Collapse, List, Divider
 } from 'antd';
 import {
   SafetyOutlined, TeamOutlined, PlusOutlined, EyeOutlined, EditOutlined,
   DeleteOutlined, UserOutlined, DollarOutlined, CalendarOutlined,
   BankOutlined, FileTextOutlined, IdcardOutlined, PhoneOutlined,
-  ReloadOutlined
+  ReloadOutlined, FileProtectOutlined, AuditOutlined
 } from '@ant-design/icons';
 import { useAuthStore, canEdit } from '../../stores/authStore';
 import supabase from '../../utils/supabase';
 import { REAL_INSURANCE_DATA } from './realData';
 import type { InsuranceRecord } from './realData';
+import { ALL_POLICIES } from './policyData';
+import type { PolicyInfo, PolicyPlan } from './policyData';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -39,6 +42,7 @@ const InsurancePage: React.FC = () => {
   const [editingRecord, setEditingRecord] = useState<InsuranceRecord | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<InsuranceRecord | null>(null);
   const [form] = Form.useForm();
+  const [activeTab, setActiveTab] = useState<string>('personnel');
 
   useEffect(() => {
     fetchData();
@@ -72,6 +76,17 @@ const InsurancePage: React.FC = () => {
     // 普通员工只看到自己的保险
     return data.filter((item) => item.employee_name === user?.display_name);
   }, [data, isAdminUser, user]);
+
+  // 根据角色过滤保单数据
+  const filteredPolicies = useMemo(() => {
+    if (isAdminUser) {
+      return ALL_POLICIES;
+    }
+    // 普通员工只看到自己关联的保单
+    return ALL_POLICIES.filter((policy) =>
+      policy.insured_employees.includes(user?.display_name || '')
+    );
+  }, [isAdminUser, user]);
 
   // 统计数据
   const stats = useMemo(() => {
@@ -299,8 +314,19 @@ const InsurancePage: React.FC = () => {
         </Text>
       </div>
 
-      {/* 统计卡片 */}
-      <div className="stats-row">
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={[
+          {
+            key: 'personnel',
+            label: (
+              <span><TeamOutlined />在保人员</span>
+            ),
+            children: (
+              <>
+                {/* 统计卡片 */}
+                <div className="stats-row">
         <Card className="stat-card">
           <Statistic title="在保人数" value={stats.totalInsured} prefix={<TeamOutlined />} />
           <Text type="secondary" style={{ fontSize: 12 }}>涉及 {stats.employeeCount} 名员工</Text>
@@ -348,6 +374,20 @@ const InsurancePage: React.FC = () => {
           scroll={{ x: isAdminUser ? 1360 : 1200 }}
         />
       </Card>
+              </>
+            ),
+          },
+          {
+            key: 'policies',
+            label: (
+              <span><FileProtectOutlined />保单查阅</span>
+            ),
+            children: (
+              <PolicyView policies={filteredPolicies} />
+            ),
+          },
+        ]}
+      />
 
       {/* 添加/编辑弹窗 */}
       <Modal
@@ -539,6 +579,143 @@ const InsurancePage: React.FC = () => {
           </Descriptions>
         )}
       </Modal>
+    </div>
+  );
+};
+
+// ============================================================
+// 保单查阅子组件
+// ============================================================
+const PolicyView: React.FC<{ policies: PolicyInfo[] }> = ({ policies }) => {
+  const { user } = useAuthStore();
+  const isAdminUser = user ? canEdit(user.role) : false;
+
+  if (policies.length === 0) {
+    return (
+      <Card>
+        <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+          <FileProtectOutlined style={{ fontSize: 48, marginBottom: 16 }} />
+          <div>暂无关联保单</div>
+        </div>
+      </Card>
+    );
+  }
+
+  const formatCurrency = (val: number) => `¥${val.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  return (
+    <div>
+      {policies.map((policy) => (
+        <Card
+          key={policy.id}
+          style={{ marginBottom: 24 }}
+          title={
+            <Space>
+              <FileProtectOutlined style={{ color: '#1890ff' }} />
+              <span style={{ fontWeight: 600 }}>{policy.policy_name}</span>
+              <Tag color="blue">{policy.policy_number}</Tag>
+            </Space>
+          }
+          extra={
+            <Space>
+              <Tag color={policy.insurance_provider === '友邦保险' ? 'green' : 'purple'}>
+                {policy.insurance_provider}
+              </Tag>
+            </Space>
+          }
+        >
+          {/* 保单基本信息 */}
+          <Descriptions bordered size="small" column={{ xs: 1, sm: 2, md: 3 }} style={{ marginBottom: 16 }}>
+            <Descriptions.Item label="保险类型">
+              <Tag color="blue">{policy.insurance_type}</Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="合同期间">{policy.contract_period}</Descriptions.Item>
+            <Descriptions.Item label="缴费方式">{policy.payment_method}</Descriptions.Item>
+            <Descriptions.Item label="总被保人数">{policy.total_insured}人</Descriptions.Item>
+            <Descriptions.Item label="年保费">
+              <Text strong style={{ color: '#1890ff' }}>{formatCurrency(policy.annual_premium)}</Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="保障概要">{policy.coverage_summary}</Descriptions.Item>
+          </Descriptions>
+
+          {/* 保障计划明细 */}
+          <Divider orientation="left" plain>
+            <AuditOutlined style={{ marginRight: 6 }} />
+            保障计划明细
+          </Divider>
+
+          <Collapse
+            size="small"
+            items={policy.plans.map((plan: PolicyPlan, idx: number) => ({
+              key: `${policy.id}-plan-${idx}`,
+              label: (
+                <Space>
+                  <span style={{ fontWeight: 500 }}>{plan.plan_name}</span>
+                  {plan.department && <Tag color="geekblue">{plan.department}</Tag>}
+                  <Tag color="gold">{formatCurrency(plan.monthly_premium)}/月</Tag>
+                </Space>
+              ),
+              children: (
+                <Table
+                  dataSource={plan.coverage_items.map((item, i) => ({ ...item, key: i }))}
+                  columns={[
+                    { title: '保障项目', dataIndex: 'item_name', key: 'item_name', width: 200 },
+                    { title: '保额/保障内容', dataIndex: 'coverage_amount', key: 'coverage_amount' },
+                  ]}
+                  pagination={false}
+                  size="small"
+                  bordered
+                />
+              ),
+            }))}
+          />
+
+          {/* 特别约定 */}
+          {policy.special_terms.length > 0 && (
+            <>
+              <Divider orientation="left" plain style={{ marginTop: 24 }}>
+                特别约定
+              </Divider>
+              <List
+                size="small"
+                dataSource={policy.special_terms}
+                renderItem={(item: string) => (
+                  <List.Item style={{ paddingLeft: 8 }}>
+                    <Text type="secondary">• {item}</Text>
+                  </List.Item>
+                )}
+              />
+            </>
+          )}
+
+          {/* 关联信息 */}
+          <Divider orientation="left" plain style={{ marginTop: 24 }}>
+            关联信息
+          </Divider>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Text type="secondary">关联分支机构：</Text>
+              {policy.insured_branches.map((b) => (
+                <Tag key={b} style={{ marginBottom: 4 }}>{b}</Tag>
+              ))}
+            </Col>
+            <Col span={12}>
+              <Text type="secondary">
+                {isAdminUser
+                  ? `关联员工：${policy.insured_employees.length}人`
+                  : '关联员工：本人'}
+              </Text>
+              {isAdminUser && (
+                <div style={{ marginTop: 4 }}>
+                  {policy.insured_employees.map((name) => (
+                    <Tag key={name} color="default" style={{ marginBottom: 4 }}>{name}</Tag>
+                  ))}
+                </div>
+              )}
+            </Col>
+          </Row>
+        </Card>
+      ))}
     </div>
   );
 };
