@@ -17,6 +17,8 @@ import {
   DownOutlined,
   UserOutlined,
   SwapOutlined,
+  LeftOutlined,
+  RightOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
@@ -126,6 +128,7 @@ const MainLayout: React.FC = () => {
   const location = useLocation();
   const { user, logout } = useAuthStore();
   const [openKeys, setOpenKeys] = React.useState<string[]>(['recruitment', 'onboarding', 'employment']);
+  const [collapsed, setCollapsed] = React.useState(false);
 
   // 根据当前路径自动展开对应的父菜单
   React.useEffect(() => {
@@ -207,16 +210,26 @@ const MainLayout: React.FC = () => {
       </Header>
 
       <Layout className="layout-content">
-        <Sider className="layout-sider" width={220}>
+        <Sider
+          className="layout-sider"
+          width={220}
+          collapsedWidth={56}
+          collapsed={collapsed}
+          onCollapse={setCollapsed}
+          collapsible
+          trigger={collapsed ? <RightOutlined style={{ fontSize: 12 }} /> : <LeftOutlined style={{ fontSize: 12 }} />}
+          style={{ position: 'relative' }}
+        >
           <Menu
             mode="inline"
             theme="dark"
             selectedKeys={[location.pathname]}
-            openKeys={openKeys}
+            openKeys={collapsed ? [] : openKeys}
             onOpenChange={setOpenKeys}
             items={filteredMenu}
             onClick={handleMenuClick}
-            style={{ height: '100%', borderRight: 0, paddingTop: 8 }}
+            inlineCollapsed={collapsed}
+            style={{ height: 'calc(100% - 40px)', borderRight: 0, paddingTop: 8, overflowY: 'auto', overflowX: 'hidden' }}
           />
         </Sider>
 

@@ -243,3 +243,9 @@ body {
     padding: 24px;
   }
 }
+
+/* 入职文件表格：强制行高一致 */
+.onboarding-docs-table .ant-table-cell {
+  vertical-align: middle !important;
+  padding: 8px 12px !important;
+}

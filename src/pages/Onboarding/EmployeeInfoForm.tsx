@@ -1,11 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   Card, Form, Input, Select, DatePicker, Button, message, Radio, Divider,
-  Typography, Row, Col, Upload, InputNumber, Cascader,
+  Typography, Row, Col, Upload, InputNumber, Cascader, Space, Tooltip,
 } from 'antd';
-import { UploadOutlined, SaveOutlined } from '@ant-design/icons';
+import {
+  UploadOutlined, SaveOutlined, DownloadOutlined, ImportOutlined,
+} from '@ant-design/icons';
 import supabase from '../../utils/supabase';
 import dayjs from 'dayjs';
+import * as XLSX from 'xlsx';
 import { useOutletContext } from 'react-router-dom';
 import type { OnboardingContext } from './index';
 
@@ -177,11 +180,199 @@ const EmployeeInfoForm: React.FC = () => {
     setLoading(false);
   };
 
+  // 定义表单字段映射（label -> field_name）
+  const fieldLabelMap: Record<string, string> = {
+    '姓名': 'chinese_name', '英文名': 'english_name', '性别': 'gender',
+    '出生日期': 'birthday', '出生地': 'birth_place', '民族': 'nation',
+    '政治面貌': 'political_status', '文化程度': 'highest_education', '户口性质': 'household_type',
+    '身份证号码': 'id_card', '联系电话': 'phone', '邮箱': 'email',
+    '户口所在地址': 'household_address', '现居地址': 'living_address',
+    '员工类型': 'employee_type', '岗位名称': 'position_name', '职级': 'grade',
+    '入职日期': 'onboard_date', '合同起始日期': 'contract_start', '合同终止日期': 'contract_end',
+    '试用期截止日': 'probation_end', '月薪（元）': 'monthly_salary', '开户银行': 'bank_name',
+    '银行卡号': 'bank_account', '社会保险状况': 'social_insurance_status', '商业保险': 'commercial_insurance',
+    '首次参加工作时间': 'first_work_date', '婚姻状况': 'marital_status', '子女状况': 'children_status',
+    '家庭情况（直属）': 'family_info', '前期就业状态': 'prev_employment_status', '档案所在地': 'archive_location',
+    '毕业院校': 'graduate_school', '毕业时间': 'graduation_date', '专业': 'major',
+    '技术特长': 'technical_skills', '工作履历': 'work_history',
+    '紧急联系人': 'emergency_contact_name', '紧急联系人电话': 'emergency_contact_phone',
+    '传染病史(q1)': 'declarations.q1_infectious',
+    '竞业禁止(q2)': 'declarations.q2_noncompete',
+    '行为不检(q3)': 'declarations.q3_misconduct',
+    '轮班接受(q4)': 'declarations.q4_shift_work',
+    '规章接受(q5)': 'declarations.q5_rules_accept',
+    '其他劳动关系(q6)': 'declarations.q6_other_employment',
+  };
+
+  // 日期字段列表
+  const dateFields = ['birthday', 'onboard_date', 'contract_start', 'contract_end',
+    'probation_end', 'first_work_date', 'graduation_date'];
+
+  // 一键导出
+  const handleExport = () => {
+    const values = form.getFieldsValue();
+    const rows: { 字段: string; 内容: string }[] = [];
+
+    const sections: { title: string; fields: string[] }[] = [
+      {
+        title: '一、员工基础信息',
+        fields: ['姓名', '英文名', '性别', '出生日期', '出生地', '民族', '政治面貌', '文化程度', '户口性质', '身份证号码', '联系电话', '邮箱', '户口所在地址', '现居地址'],
+      },
+      {
+        title: '二、工作信息',
+        fields: ['员工类型', '岗位名称', '职级', '入职日期', '合同起始日期', '合同终止日期', '试用期截止日', '月薪（元）', '开户银行', '银行卡号', '社会保险状况', '商业保险'],
+      },
+      {
+        title: '三、个人现状信息',
+        fields: ['首次参加工作时间', '婚姻状况', '子女状况', '家庭情况（直属）', '前期就业状态', '档案所在地', '毕业院校', '毕业时间', '专业', '技术特长', '工作履历', '紧急联系人', '紧急联系人电话'],
+      },
+      {
+        title: '四、个人声明确认',
+        fields: ['传染病史(q1)', '竞业禁止(q2)', '行为不检(q3)', '轮班接受(q4)', '规章接受(q5)', '其他劳动关系(q6)'],
+      },
+    ];
+
+    for (const section of sections) {
+      rows.push({ 字段: section.title, 内容: '' });
+      for (const label of section.fields) {
+        const fieldName = fieldLabelMap[label];
+        let rawVal = fieldName ? values[fieldName] : undefined;
+
+        if (fieldName?.includes('declarations.')) {
+          rawVal = values.declarations?.[fieldName.split('.')[1]];
+        }
+
+        let displayVal = '';
+        if (rawVal === undefined || rawVal === null || rawVal === '') {
+          displayVal = '';
+        } else if (Array.isArray(rawVal)) {
+          displayVal = rawVal.join('');
+        } else if (dayjs.isDayjs(rawVal)) {
+          displayVal = rawVal.format('YYYY-MM-DD');
+        } else if (typeof rawVal === 'boolean') {
+          displayVal = rawVal ? '是' : '否';
+        } else if (label === '员工类型') {
+          const map: Record<string, string> = { full_time: '全职', intern: '实习', labor: '劳务', outsource: '外包' };
+          displayVal = map[rawVal] || rawVal;
+        } else {
+          displayVal = String(rawVal);
+        }
+        rows.push({ 字段: label, 内容: displayVal });
+      }
+      rows.push({ 字段: '', 内容: '' });
+    }
+
+    const ws = XLSX.utils.json_to_sheet(rows, { header: ['字段', '内容'] });
+    ws['!cols'] = [{ wch: 22 }, { wch: 40 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '信息登记表');
+    const name = employee?.chinese_name || '员工';
+    XLSX.writeFile(wb, `员工信息登记表_${name}.xlsx`);
+    message.success('导出成功');
+  };
+
+  // 一键导入
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const wb = XLSX.read(data, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const json: { 字段: string; 内容: string }[] = XLSX.utils.sheet_to_json(ws, { header: ['字段', '内容'] });
+
+        const fieldValues: Record<string, any> = {};
+        const declarations: Record<string, boolean | undefined> = {};
+
+        for (const row of json) {
+          const label = row['字段']?.trim();
+          const content = row['内容'];
+          if (!label || label.startsWith('一、') || label.startsWith('二、') || label.startsWith('三、') || label.startsWith('四、') || label.startsWith('五、')) continue;
+          const fieldName = fieldLabelMap[label];
+          if (!fieldName || !content) continue;
+
+          if (fieldName.startsWith('declarations.')) {
+            const key = fieldName.split('.')[1];
+            declarations[key] = content === '是';
+          } else if (dateFields.includes(fieldName)) {
+            fieldValues[fieldName] = dayjs(content);
+          } else if (fieldName === 'birth_place') {
+            // 尝试解析为级联数组
+            fieldValues[fieldName] = content.replace(/省|市/g, (m: string) => m + '|').split('|').filter(Boolean);
+          } else if (fieldName === 'monthly_salary') {
+            fieldValues[fieldName] = parseFloat(content.replace(/,/g, ''));
+          } else if (fieldName === 'employee_type') {
+            const revMap: Record<string, string> = { '全职': 'full_time', '实习': 'intern', '劳务': 'labor', '外包': 'outsource' };
+            fieldValues[fieldName] = revMap[content] || content;
+          } else {
+            fieldValues[fieldName] = content;
+          }
+        }
+
+        if (Object.keys(declarations).length > 0) {
+          fieldValues.declarations = declarations;
+        }
+
+        form.setFieldsValue(fieldValues);
+        message.success(`已导入 ${Object.keys(fieldValues).length} 个字段`);
+      } catch (err) {
+        message.error('文件解析失败，请确认使用正确模板格式');
+        console.error(err);
+      }
+      setImporting(false);
+      // 重置 input 以便重复导入同一文件
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
   if (!employeeId) {
     return <Text type="secondary">请先在顶部选择员工</Text>;
   }
 
   return (
+    <>
+      {/* 导入/导出工具栏 */}
+      <Card size="small" style={{ marginBottom: 16, background: '#fafafa' }}>
+        <Row justify="space-between" align="middle">
+          <Col>
+            <Text strong style={{ fontSize: 14 }}>信息登记表</Text>
+            <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
+              {employee?.chinese_name || '未选择员工'}
+            </Text>
+          </Col>
+          <Col>
+            <Space>
+              <Tooltip title="下载当前员工信息登记表为 Excel 模板">
+                <Button icon={<DownloadOutlined />} onClick={handleExport}>
+                  导出
+                </Button>
+              </Tooltip>
+              <Tooltip title="从 Excel 文件导入覆盖当前表单（按固定模板格式）">
+                <Button icon={<ImportOutlined />} loading={importing}
+                  onClick={() => fileInputRef.current?.click()}>
+                  导入
+                </Button>
+              </Tooltip>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                style={{ display: 'none' }}
+                onChange={handleImport}
+              />
+            </Space>
+          </Col>
+        </Row>
+      </Card>
+
     <Form form={form} layout="vertical" onFinish={handleSubmit}
       initialValues={{
         gender: '男',
@@ -546,6 +737,7 @@ const EmployeeInfoForm: React.FC = () => {
         </Button>
       </div>
     </Form>
+    </>
   );
 };
 

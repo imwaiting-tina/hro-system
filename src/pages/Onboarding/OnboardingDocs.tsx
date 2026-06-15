@@ -144,48 +144,44 @@ const OnboardingDocs: React.FC = () => {
   };
 
   const columns = [
-    { title: '员工', dataIndex: 'employee_id', width: 100,
+    { title: '员工', dataIndex: 'employee_id', width: 80,
       render: (id: string) => employees.find((e: any) => e.id === id)?.chinese_name || '-' },
     {
       title: '文件类型', dataIndex: 'doc_type', width: 200,
       render: (type: OnboardingDocType) => (
-        <Space>
-          <FileTextOutlined />
-          <span>{docTypeMap[type]?.label || type}</span>
-          {docTypeMap[type]?.needSeal && <Tag color="orange" style={{ fontSize: 10 }}>需用印</Tag>}
-          {docTypeMap[type]?.needDuplicate && <Tag color="purple" style={{ fontSize: 10 }}>一式两份</Tag>}
-        </Space>
+        <div>
+          <FileTextOutlined style={{ marginRight: 4, color: '#8c8c8c', verticalAlign: -1 }} />
+          <span style={{ fontWeight: 500 }}>{docTypeMap[type]?.label || type}</span>
+          {docTypeMap[type]?.needSeal && <Tag color="orange" style={{ marginLeft: 6, fontSize: 11 }}>需用印</Tag>}
+          {docTypeMap[type]?.needDuplicate && <Tag color="purple" style={{ marginLeft: 2, fontSize: 11 }}>一式两份</Tag>}
+        </div>
       ),
     },
-    { title: '文件编号', dataIndex: 'doc_number', width: 120 },
-    { title: '签署状态', dataIndex: 'signed', width: 100,
-      render: (v: boolean) => v ? <Tag color="success">已签署</Tag> : <Tag>未签署</Tag> },
-    { title: '用印状态', dataIndex: 'sealed_at', width: 100,
-      render: (v: string) => v ? <Tag color="cyan">已用印</Tag> : <Tag>未用印</Tag> },
-    { title: '份数', dataIndex: 'copy_count', width: 70, align: 'center' as const,
-      render: (v: number) => v > 1 ? <Tag color="purple">一式{v}份</Tag> : <Tag>单份</Tag> },
-    { title: '一式两份', dataIndex: 'id', width: 160,
-      render: (_: string, record: any) => renderCopyStatus(record) },
+    { title: '编号', dataIndex: 'doc_number', width: 100, ellipsis: true },
+    { title: '签署', dataIndex: 'signed', width: 72, align: 'center' as const,
+      render: (v: boolean) => v ? <Tag color="success">已签</Tag> : <Tag>未签</Tag> },
+    { title: '用印', dataIndex: 'sealed_at', width: 72, align: 'center' as const,
+      render: (v: string) => v ? <Tag color="cyan">已印</Tag> : <Tag>未印</Tag> },
     { title: '状态', dataIndex: 'status', width: 110,
       render: (status: DocStatus) => <Tag color={docStatusMap[status]?.color}>{docStatusMap[status]?.label}</Tag> },
     {
-      title: '操作', width: 340,
+      title: '一式两份状态', dataIndex: 'id', width: 130,
+      render: (_: string, record: any) => renderCopyStatus(record) },
+    {
+      title: '操作', width: 340, fixed: 'right' as const,
       render: (_: any, record: any) => (
-        <Space size="small">
+        <Space size={4} wrap>
           <Button size="small" icon={<EyeOutlined />}
             onClick={() => { setSelectedRecord(record); setDetailVisible(true); }}>详情</Button>
 
-          {/* 待准备 → 待签署 */}
           {user && canEdit(user.role) && record.status === 'pending' && (
             <Button size="small" onClick={() => handleStatusChange(record.id, 'pending_sign')}>准备签署</Button>
           )}
 
-          {/* 待签署 → 待用印（需要印的文档） */}
           {record.need_seal && record.status === 'pending_sign' && user && canEdit(user.role) && (
             <Button size="small" type="primary" onClick={() => handleStatusChange(record.id, 'pending_seal')}>申请用印</Button>
           )}
 
-          {/* 待用印 → 已用印（一式两份同时用印） */}
           {record.status === 'pending_seal' && user && canEdit(user.role) && (
             <Tooltip title={record.copy_count > 1 ? '一式两份同时用印' : '确认用印'}>
               <Button size="small" type="primary"
@@ -197,27 +193,23 @@ const OnboardingDocs: React.FC = () => {
             </Tooltip>
           )}
 
-          {/* 已用印 → 公司联归档（一式两份文档） */}
           {record.status === 'sealed' && record.copy_count > 1 && user && canEdit(user.role) && (
             <Popconfirm title="确认将公司联归档？" onConfirm={() => handleCompanyArchive(record.id)}>
               <Button size="small" icon={<ContainerOutlined />}>公司联归档</Button>
             </Popconfirm>
           )}
 
-          {/* 公司联已归档 → 归还员工联 */}
           {record.status === 'company_archived' && user && canEdit(user.role) && (
             <Popconfirm title="确认将员工联归还本人？" onConfirm={() => handleReturnToEmployee(record.id)}>
               <Button size="small" type="primary" icon={<SendOutlined />}>归还本人</Button>
             </Popconfirm>
           )}
 
-          {/* 员工联已归还 → 全部归档 */}
           {record.status === 'returned_to_employee' && user && canEdit(user.role) && (
             <Button size="small" icon={<CheckCircleOutlined />}
               onClick={() => handleFullArchive(record.id)}>全部归档</Button>
           )}
 
-          {/* 非一式两份文档：已用印直接归档 */}
           {record.status === 'sealed' && (!record.copy_count || record.copy_count <= 1) && user && canEdit(user.role) && (
             <Button size="small" onClick={() => handleStatusChange(record.id, 'archived')}>归档</Button>
           )}
@@ -283,8 +275,9 @@ const OnboardingDocs: React.FC = () => {
             }}>新建入职文件</Button>
           )}
         </div>
-        <Table columns={columns} dataSource={data} rowKey="id"
-          loading={loading} pagination={{ pageSize: 10 }} scroll={{ x: 1400 }} />
+        <Table className="onboarding-docs-table" columns={columns} dataSource={data} rowKey="id" size="middle"
+          loading={loading} pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (t: number) => `共 ${t} 条` }}
+          scroll={{ x: 1144 }} />
       </Card>
 
       <Modal title="新建入职文件" open={modalVisible}
