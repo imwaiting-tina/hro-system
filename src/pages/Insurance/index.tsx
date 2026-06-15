@@ -11,31 +11,11 @@ import {
 } from '@ant-design/icons';
 import { useAuthStore, canEdit } from '../../stores/authStore';
 import supabase from '../../utils/supabase';
+import { REAL_INSURANCE_DATA } from './realData';
+import type { InsuranceRecord } from './realData';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
-
-interface InsuranceRecord {
-  id: string;
-  employee_id: string;
-  employee_name: string;
-  employee_no: string;
-  department_name: string;
-  insurance_type: string;        // 友邦团体综合险 / 友邦意外险 / 平安致优白金计划
-  insurance_provider: string;    // 友邦保险 / 平安保险
-  policy_number: string;
-  insured_name: string;          // 被保人姓名
-  relation: string;              // 本人 / 家属
-  relation_detail: string;       // 家属关系说明（配偶/子女等）
-  coverage_start: string;
-  coverage_end: string;
-  monthly_premium: number;
-  coverage_amount: number;
-  status: 'active' | 'expired' | 'pending' | 'cancelled';
-  remarks: string;
-  created_at: string;
-  updated_at: string;
-}
 
 const INSURANCE_TYPES = [
   '友邦团体综合险',
@@ -72,86 +52,17 @@ const InsurancePage: React.FC = () => {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        setData(getMockData());
-      } else if (insuranceData && insuranceData.length > 0) {
-        setData(insuranceData);
+      if (error || !insuranceData || insuranceData.length === 0) {
+        setData(REAL_INSURANCE_DATA);
       } else {
-        setData(getMockData());
+        setData(insuranceData);
       }
     } catch {
-      setData(getMockData());
+      setData(REAL_INSURANCE_DATA);
     } finally {
       setLoading(false);
     }
   };
-
-  const getMockData = (): InsuranceRecord[] => [
-    {
-      id: '1', employee_id: 'emp-001', employee_name: '张三', employee_no: 'KY0001',
-      department_name: '技术部', insurance_type: '友邦团体综合险', insurance_provider: '友邦保险',
-      policy_number: 'AIA-GRP-2026-001', insured_name: '张三', relation: '本人',
-      relation_detail: '', coverage_start: '2026-01-01', coverage_end: '2026-12-31',
-      monthly_premium: 180, coverage_amount: 500000, status: 'active',
-      remarks: '团体综合险-标准计划', created_at: '2026-01-01', updated_at: '2026-01-01',
-    },
-    {
-      id: '2', employee_id: 'emp-001', employee_name: '张三', employee_no: 'KY0001',
-      department_name: '技术部', insurance_type: '友邦团体综合险', insurance_provider: '友邦保险',
-      policy_number: 'AIA-GRP-2026-002', insured_name: '李芳', relation: '家属',
-      relation_detail: '配偶', coverage_start: '2026-01-01', coverage_end: '2026-12-31',
-      monthly_premium: 150, coverage_amount: 300000, status: 'active',
-      remarks: '团体综合险-家属计划', created_at: '2026-01-01', updated_at: '2026-01-01',
-    },
-    {
-      id: '3', employee_id: 'emp-002', employee_name: '李四', employee_no: 'KY0002',
-      department_name: '财务部', insurance_type: '友邦意外险', insurance_provider: '友邦保险',
-      policy_number: 'AIA-ACC-2026-003', insured_name: '李四', relation: '本人',
-      relation_detail: '', coverage_start: '2026-03-01', coverage_end: '2027-02-28',
-      monthly_premium: 85, coverage_amount: 1000000, status: 'active',
-      remarks: '意外险-高保额', created_at: '2026-03-01', updated_at: '2026-03-01',
-    },
-    {
-      id: '4', employee_id: 'emp-003', employee_name: '王五', employee_no: 'KY0003',
-      department_name: '行政部', insurance_type: '平安致优白金计划', insurance_provider: '平安保险',
-      policy_number: 'PA-ZY-2026-004', insured_name: '王五', relation: '本人',
-      relation_detail: '', coverage_start: '2026-01-01', coverage_end: '2026-12-31',
-      monthly_premium: 320, coverage_amount: 800000, status: 'active',
-      remarks: '白金计划-含门诊', created_at: '2026-01-01', updated_at: '2026-01-01',
-    },
-    {
-      id: '5', employee_id: 'emp-004', employee_name: '赵六', employee_no: 'KY0004',
-      department_name: '运营部', insurance_type: '友邦团体综合险', insurance_provider: '友邦保险',
-      policy_number: 'AIA-GRP-2025-005', insured_name: '赵六', relation: '本人',
-      relation_detail: '', coverage_start: '2025-06-01', coverage_end: '2026-05-31',
-      monthly_premium: 180, coverage_amount: 500000, status: 'expired',
-      remarks: '已到期需续保', created_at: '2025-06-01', updated_at: '2025-06-01',
-    },
-    {
-      id: '6', employee_id: 'emp-005', employee_name: '钱七', employee_no: 'KY0005',
-      department_name: '人事部', insurance_type: '友邦团体综合险', insurance_provider: '友邦保险',
-      policy_number: 'AIA-GRP-2026-006', insured_name: '钱七', relation: '本人',
-      relation_detail: '', coverage_start: '2026-06-01', coverage_end: '2026-12-31',
-      monthly_premium: 180, coverage_amount: 500000, status: 'pending',
-      remarks: '新入职待生效', created_at: '2026-06-01', updated_at: '2026-06-01',
-    },
-    {
-      id: '7', employee_id: 'emp-005', employee_name: '钱七', employee_no: 'KY0005',
-      department_name: '人事部', insurance_type: '友邦团体综合险', insurance_provider: '友邦保险',
-      policy_number: 'AIA-GRP-2026-007', insured_name: '钱小明', relation: '家属',
-      relation_detail: '子女', coverage_start: '2026-06-01', coverage_end: '2026-12-31',
-      monthly_premium: 120, coverage_amount: 200000, status: 'pending',
-      remarks: '家属-子女计划', created_at: '2026-06-01', updated_at: '2026-06-01',
-    },
-    {
-      id: '8', employee_id: 'emp-006', employee_name: '孙八', employee_no: 'KY0006',
-      department_name: '市场部', insurance_type: '友邦意外险', insurance_provider: '友邦保险',
-      policy_number: 'AIA-ACC-2026-008', insured_name: '孙八', relation: '本人',
-      relation_detail: '', coverage_start: '2026-01-01', coverage_end: '2026-12-31',
-      monthly_premium: 65, coverage_amount: 500000, status: 'active',
-      remarks: '', created_at: '2026-01-01', updated_at: '2026-01-01',
-    },
-  ];
 
   // 根据角色过滤数据
   const filteredData = useMemo(() => {
@@ -432,7 +343,7 @@ const InsurancePage: React.FC = () => {
           dataSource={filteredData}
           rowKey="id"
           loading={loading}
-          pagination={{ pageSize: 10, showTotal: (total) => `共 ${total} 条记录` }}
+          pagination={{ pageSize: 20, showTotal: (total) => `共 ${total} 条记录`, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'] }}
           size="middle"
           scroll={{ x: isAdminUser ? 1360 : 1200 }}
         />
