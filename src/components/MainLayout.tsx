@@ -233,7 +233,8 @@ const MainLayout: React.FC = () => {
             items={filteredMenu}
             onClick={handleMenuClick}
             inlineCollapsed={collapsed}
-            style={{ height: 'calc(100% - 40px)', borderRight: 0, paddingTop: 8, overflow: 'hidden' }}
+            style={{ height: 'calc(100% - 40px)', borderRight: 0, paddingTop: 8, overflowY: 'auto', overflowX: 'hidden', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            className="layout-sider-menu"
           />
         </Sider>
 

@@ -244,6 +244,11 @@ body {
   }
 }
 
+/* 左侧菜单：隐藏滚动条但保持可滚动 */
+.layout-sider-menu::-webkit-scrollbar {
+  display: none;
+}
+
 /* 入职文件表格：强制行高一致 */
 .onboarding-docs-table .ant-table-cell {
   vertical-align: middle !important;
