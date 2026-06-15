@@ -79,13 +79,38 @@ def generate_ts_code(records):
     lines.append('// 自动生成的保险记录 mock 数据')
     lines.append('// 数据来源：友邦意外险电子合同 G09221638G + 团险协议-开弈2026')
     lines.append('// 保险期间：意外险 2025.10.16-2026.10.15 | 团险 2026.04.01-2027.03.31')
-    lines.append('// 生成时间：2026-06-12')
+    lines.append('// 生成时间：2026-06-15')
+    lines.append('// 仅包含指定11人：宋卫东、翟建设、徐培珍、于爱丽、孙建芳、殷德昌、高玉玲、丁成英、施玉芹、张林梅、韩雅凤')
+    lines.append('')
+    lines.append('export interface InsuranceRecord {')
+    lines.append('  id: string;')
+    lines.append('  employee_id: string;')
+    lines.append('  employee_name: string;')
+    lines.append('  employee_no: string;')
+    lines.append('  department_name: string;')
+    lines.append('  insurance_type: string;')
+    lines.append('  insurance_provider: string;')
+    lines.append('  policy_number: string;')
+    lines.append('  insured_name: string;')
+    lines.append('  relation: string;')
+    lines.append('  relation_detail: string;')
+    lines.append('  coverage_start: string;')
+    lines.append('  coverage_end: string;')
+    lines.append('  monthly_premium: number;')
+    lines.append('  coverage_amount: number;')
+    lines.append('  status: \'active\' | \'expired\' | \'pending\' | \'cancelled\';')
+    lines.append('  remarks: string;')
+    lines.append('  created_at: string;')
+    lines.append('  updated_at: string;')
+    lines.append('}')
     lines.append('')
     lines.append('export const REAL_INSURANCE_DATA: InsuranceRecord[] = [')
     
+    total = len(records)
     idx = 0
     for r in records:
         idx += 1
+        is_last = (idx == total)
         branch_name = get_branch_name(r['branch'])
         insured_name = str(r['insured_name']).strip()
         main_insured = str(r['main_insured']).strip()
@@ -125,13 +150,17 @@ def generate_ts_code(records):
         line += f" relation_detail: '',"
         line += f" coverage_start: '{escape_str(r['effective_date'])}',"
         line += f" coverage_end: '{escape_str(r['end_date'])}',"
-        line += f" monthly_premium: {premium}," if premium > 0 else f" monthly_premium: {premium},"
+        line += f" monthly_premium: {premium},"
         line += f" coverage_amount: {coverage_amount},"
         line += f" status: '{status}',"
-        line += f" remarks: '意外险-{escape_str(r['plan_desc']) or "员工计划"} | {escape_str(r['customer'])}',"
+        plan_desc = escape_str(r.get('plan_desc') or '员工')
+        customer = escape_str(r.get('customer') or '')
+        line += f" remarks: '意外险-{plan_desc} | {customer}',"
         line += f" created_at: '2025-10-16',"
         line += f" updated_at: '2026-06-01',"
-        line += f"  }},"
+        line += f"  }}"
+        if not is_last:
+            line += ","
         lines.append(line)
     
     lines.append('];')
@@ -142,8 +171,13 @@ def main():
     excel_path = 'D:/xwechat_files/wxid_kqriaocrvw7b22_b5e3/msg/file/2026-06/友邦意外险20260601.xlsx'
     
     print("Loading Excel data...")
-    records = load_excel_data(excel_path)
-    print(f"Loaded {len(records)} records")
+    all_records = load_excel_data(excel_path)
+    print(f"Loaded {len(all_records)} records")
+    
+    # 只保留指定的11人
+    target_names = {'宋卫东','翟建设','徐培珍','于爱丽','孙建芳','殷德昌','高玉玲','丁成英','施玉芹','张林梅','韩雅凤'}
+    records = [r for r in all_records if str(r['insured_name']).strip() in target_names]
+    print(f"Filtered to {len(records)} records (target: 11 persons)")
     
     # 按分支机构统计
     branches = {}
