@@ -75,7 +75,7 @@ const OffboardingListPage: React.FC = () => {
     try {
       let query = supabase
         .from('offboarding_cases')
-        .select('*, employees!inner(name, employee_no, department, position), approver:users!offboarding_cases_approver_id_fkey(display_name)')
+        .select('*, employees!offboarding_cases_employee_id_fkey(chinese_name, employee_no, position_name, department_id, departments(name))')
         .order('submitted_at', { ascending: false });
 
       const { data: result, error } = await query;
@@ -83,11 +83,11 @@ const OffboardingListPage: React.FC = () => {
       if (!error && result) {
         let filtered = result.map((r: any) => ({
           ...r,
-          employee_name: r.employees?.name || '',
-          employee_department: r.employees?.department || '',
-          employee_position: r.employees?.position || '',
+          employee_name: r.employees?.chinese_name || '',
+          employee_department: r.employees?.departments?.name || '',
+          employee_position: r.employees?.position_name || '',
           employee_no: r.employees?.employee_no || '',
-          approver_name: r.approver?.display_name || '',
+          approver_name: '',
         }));
 
         // 前端筛选
@@ -122,8 +122,8 @@ const OffboardingListPage: React.FC = () => {
 
   // 加载员工列表（用于创建表单选择）
   useEffect(() => {
-    supabase.from('employees').select('id, name, employee_no, department').order('name')
-      .then(({ data }) => { if (data) setEmployees(data); });
+    supabase.from('employees').select('id, chinese_name, employee_no, department_id, departments(name)')
+      .then(({ data }) => { if (data) setEmployees(data.map((e: any) => ({ ...e, name: e.chinese_name, department: e.departments?.name }))); });
   }, []);
 
   // HR审批通过

@@ -43,8 +43,8 @@ const OffboardingNewPage: React.FC = () => {
         // 通过email或username匹配employees表
         const { data } = await supabase
           .from('employees')
-          .select('id, name, employee_no, department, position')
-          .or(`email.eq.${user.email},name.eq.${user.display_name}`)
+          .select('id, chinese_name, employee_no, position_name, department_id, departments(name)')
+          .or(`email.eq.${user.email},chinese_name.eq.${user.display_name}`)
           .limit(1);
 
         if (data && data.length > 0) {

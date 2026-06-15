@@ -39,16 +39,16 @@ const OffboardingHandoverPage: React.FC = () => {
       // 加载离职单
       const { data: caseResult } = await supabase
         .from('offboarding_cases')
-        .select('*, employees!inner(name, employee_no, department, position)')
+        .select('*, employees!offboarding_cases_employee_id_fkey(chinese_name, employee_no, position_name, department_id, departments(name))')
         .eq('id', id)
         .single();
 
       if (caseResult) {
         setCaseData({
           ...caseResult,
-          employee_name: caseResult.employees?.name || '',
-          employee_department: caseResult.employees?.department || '',
-          employee_position: caseResult.employees?.position || '',
+          employee_name: caseResult.employees?.chinese_name || '',
+          employee_department: caseResult.employees?.departments?.name || '',
+          employee_position: caseResult.employees?.position_name || '',
           employee_no: caseResult.employees?.employee_no || '',
         });
       }
