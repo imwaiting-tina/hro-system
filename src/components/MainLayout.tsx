@@ -73,10 +73,14 @@ const menuConfig = [
     ],
   },
   {
-    key: '/daily',
+    key: 'daily',
     icon: <ScheduleOutlined />,
     label: '日常管理',
     roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head', 'employee'] as UserRole[],
+    children: [
+      { key: '/daily', icon: <ScheduleOutlined />, label: '日常事务' },
+      { key: '/daily/retirement', icon: <TeamOutlined />, label: '退休管理' },
+    ],
   },
   {
     key: '/resignation',
