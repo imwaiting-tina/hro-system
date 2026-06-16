@@ -38,27 +38,34 @@ const OffboardingSettlementPage: React.FC = () => {
     try {
       const { data: caseResult } = await supabase
         .from('offboarding_cases')
-        .select('*, employees!offboarding_cases_employee_id_fkey(chinese_name, employee_no, position_name, department_id, departments(name), monthly_salary, onboard_date)')
+        .select('*')
         .eq('id', id)
         .single();
 
       if (caseResult) {
+        // 单独查员工信息（含薪资和入职日期）
+        const { data: empData } = await supabase
+          .from('employees')
+          .select('chinese_name, employee_no, position_name, monthly_salary, onboard_date')
+          .eq('id', caseResult.employee_id)
+          .maybeSingle();
+
         setCaseData({
           ...caseResult,
-          employee_name: caseResult.employees?.chinese_name || '',
-          employee_department: caseResult.employees?.departments?.name || '',
-          employee_position: caseResult.employees?.position_name || '',
-          employee_no: caseResult.employees?.employee_no || '',
+          employee_name: empData?.chinese_name || '',
+          employee_department: '',
+          employee_position: empData?.position_name || '',
+          employee_no: empData?.employee_no || '',
         });
 
         // 预设值
-        const ms = caseResult.employees?.monthly_salary || 0;
+        const ms = empData?.monthly_salary || 0;
         setMonthlySalary(ms);
         setFinalSalary(ms); // 应发工资默认等于月薪
 
         // 计算司龄
-        if (caseResult.employees?.onboard_date) {
-          const entryDate = dayjs(caseResult.employees.onboard_date);
+        if (empData?.onboard_date) {
+          const entryDate = dayjs(empData.onboard_date);
           const lastDay = caseResult.last_working_day ? dayjs(caseResult.last_working_day) : dayjs();
           const years = lastDay.diff(entryDate, 'year', true);
           setServiceYears(Math.round(years * 10) / 10);

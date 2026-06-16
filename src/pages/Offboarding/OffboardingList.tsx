@@ -73,22 +73,33 @@ const OffboardingListPage: React.FC = () => {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      let query = supabase
+      // 先查离职单（不加join，避免400错误）
+      const { data: result, error } = await supabase
         .from('offboarding_cases')
-        .select('*, employees!offboarding_cases_employee_id_fkey(chinese_name, employee_no, position_name, department_id, departments(name))')
+        .select('*')
         .order('submitted_at', { ascending: false });
 
-      const { data: result, error } = await query;
+      if (!error && result && result.length > 0) {
+        // 批量获取员工信息
+        const empIds = [...new Set(result.map((r) => r.employee_id))];
+        const { data: empData } = await supabase
+          .from('employees')
+          .select('id, chinese_name, employee_no, position_name')
+          .in('id', empIds);
 
-      if (!error && result) {
-        let filtered = result.map((r: any) => ({
-          ...r,
-          employee_name: r.employees?.chinese_name || '',
-          employee_department: r.employees?.departments?.name || '',
-          employee_position: r.employees?.position_name || '',
-          employee_no: r.employees?.employee_no || '',
-          approver_name: '',
-        }));
+        const empMap = new Map(empData?.map((e: any) => [e.id, e]) || []);
+
+        let filtered = result.map((r: any) => {
+          const emp = empMap.get(r.employee_id);
+          return {
+            ...r,
+            employee_name: emp?.chinese_name || '',
+            employee_department: '',
+            employee_position: emp?.position_name || '',
+            employee_no: emp?.employee_no || '',
+            approver_name: '',
+          };
+        });
 
         // 前端筛选
         if (filterStatus) filtered = filtered.filter((r: OffboardingCase) => r.status === filterStatus);
@@ -122,8 +133,8 @@ const OffboardingListPage: React.FC = () => {
 
   // 加载员工列表（用于创建表单选择）
   useEffect(() => {
-    supabase.from('employees').select('id, chinese_name, employee_no, department_id, departments(name)')
-      .then(({ data }) => { if (data) setEmployees(data.map((e: any) => ({ ...e, name: e.chinese_name, department: e.departments?.name }))); });
+    supabase.from('employees').select('id, chinese_name, employee_no').order('chinese_name')
+      .then(({ data }) => { if (data) setEmployees(data.map((e: any) => ({ ...e, name: e.chinese_name, department: '' }))); });
   }, []);
 
   // HR审批通过
