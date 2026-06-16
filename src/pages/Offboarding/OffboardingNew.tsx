@@ -40,11 +40,11 @@ const OffboardingNewPage: React.FC = () => {
     const findEmployee = async () => {
       if (!user) return;
       try {
-        // 通过email或username匹配employees表
+        // 通过email匹配employees表（分步查询避免join 400错误）
         const { data } = await supabase
           .from('employees')
-          .select('id, chinese_name, employee_no, position_name, department_id, departments(name)')
-          .or(`email.eq.${user.email},chinese_name.eq.${user.display_name}`)
+          .select('id, chinese_name, employee_no, position_name')
+          .eq('email', user.email)
           .limit(1);
 
         if (data && data.length > 0) {
@@ -55,7 +55,7 @@ const OffboardingNewPage: React.FC = () => {
             .from('offboarding_cases')
             .select('*')
             .eq('employee_id', data[0].id)
-            .not('status', 'in', '("closed")')
+            .neq('status', 'closed')
             .order('submitted_at', { ascending: false })
             .limit(1);
 
