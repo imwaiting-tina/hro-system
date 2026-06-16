@@ -43,10 +43,10 @@ const OffboardingPage: React.FC = () => {
       try {
         const { data, error } = await supabase
           .from('employees')
-          .select('id, name, employee_no, department, position, employee_type')
-          .order('name');
+          .select('id, chinese_name, employee_no, position_name, employee_type')
+          .order('chinese_name');
         if (!error && data) {
-          setEmployees(data);
+          setEmployees(data.map((e: any) => ({ ...e, name: e.chinese_name, department: '' })));
           // 默认选中第一个
           if (!selectedEmployeeId && data.length > 0) {
             setSelectedEmployeeId(data[0].id);
