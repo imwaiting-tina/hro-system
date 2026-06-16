@@ -8,7 +8,7 @@ import {
   SafetyOutlined, TeamOutlined, PlusOutlined, EyeOutlined, EditOutlined,
   DeleteOutlined, UserOutlined, DollarOutlined, CalendarOutlined,
   BankOutlined, FileTextOutlined, IdcardOutlined, PhoneOutlined,
-  ReloadOutlined, FileProtectOutlined, AuditOutlined
+  ReloadOutlined, FileProtectOutlined, AuditOutlined, HeartOutlined
 } from '@ant-design/icons';
 import { useAuthStore, canEdit } from '../../stores/authStore';
 import supabase from '../../utils/supabase';
@@ -42,7 +42,12 @@ const InsurancePage: React.FC = () => {
   const [editingRecord, setEditingRecord] = useState<InsuranceRecord | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<InsuranceRecord | null>(null);
   const [form] = Form.useForm();
-  const [activeTab, setActiveTab] = useState<string>('personnel');
+  const [activeTab, setActiveTab] = useState<string>('mine');
+
+  useEffect(() => {
+    // 管理员默认查看"在保人员"，普通员工默认查看"我的保险"
+    setActiveTab(isAdminUser ? 'personnel' : 'mine');
+  }, [isAdminUser]);
 
   useEffect(() => {
     fetchData();
@@ -87,6 +92,21 @@ const InsurancePage: React.FC = () => {
       policy.insured_employees.includes(user?.display_name || '')
     );
   }, [isAdminUser, user]);
+
+  // "我的保险"专用：无论管理员还是普通员工，都只看当前用户自己的投保记录
+  // 匹配规则：employee_name === display_name，或被保人是家属（同样挂在该员工名下的家属记录）
+  const myFilteredData = useMemo(() => {
+    if (!user?.display_name) return [];
+    return data.filter((item) => item.employee_name === user.display_name);
+  }, [data, user]);
+
+  // "我的保险"专用：只显示当前用户关联的保单（不论角色）
+  const myFilteredPolicies = useMemo(() => {
+    if (!user?.display_name) return [];
+    return ALL_POLICIES.filter((policy) =>
+      policy.insured_employees.includes(user.display_name)
+    );
+  }, [user]);
 
   // 统计数据
   const stats = useMemo(() => {
@@ -318,7 +338,8 @@ const InsurancePage: React.FC = () => {
         activeKey={activeTab}
         onChange={setActiveTab}
         items={[
-          {
+          // 管理员可见"在保人员" Tab
+          ...(isAdminUser ? [{
             key: 'personnel',
             label: (
               <span><TeamOutlined />在保人员</span>
@@ -376,11 +397,26 @@ const InsurancePage: React.FC = () => {
       </Card>
               </>
             ),
+          }] : []),
+          // 管理员和普通员工都可见"我的保险" Tab
+          {
+            key: 'mine',
+            label: (
+              <span><HeartOutlined />我的保险</span>
+            ),
+            children: (
+              <MyInsuranceView
+                records={myFilteredData}
+                policies={myFilteredPolicies}
+                onViewDetail={(record) => { setSelectedRecord(record); setDetailOpen(true); }}
+              />
+            ),
           },
+          // 管理员和普通员工都可见"保单查询" Tab
           {
             key: 'policies',
             label: (
-              <span><FileProtectOutlined />保单查阅</span>
+              <span><FileProtectOutlined />保单查询</span>
             ),
             children: (
               <PolicyView policies={filteredPolicies} />
@@ -716,6 +752,267 @@ const PolicyView: React.FC<{ policies: PolicyInfo[] }> = ({ policies }) => {
           </Row>
         </Card>
       ))}
+    </div>
+  );
+};
+
+// ============================================================
+// "我的保险"子组件 —— 管理员和普通员工都可见，但内容只显示当前用户本人
+// ============================================================
+interface MyInsuranceViewProps {
+  records: InsuranceRecord[];
+  policies: PolicyInfo[];
+  onViewDetail: (record: InsuranceRecord) => void;
+}
+
+const MyInsuranceView: React.FC<MyInsuranceViewProps> = ({ records, policies, onViewDetail }) => {
+  const { user } = useAuthStore();
+  const isAdminUser = user ? canEdit(user.role) : false;
+
+  // 个人维度统计
+  const myStats = useMemo(() => {
+    const active = records.filter((r) => r.status === 'active');
+    const monthlyPremium = active.reduce((sum, r) => sum + r.monthly_premium, 0);
+    const totalCoverage = active.reduce((sum, r) => sum + r.coverage_amount, 0);
+    return {
+      activeCount: active.length,
+      expiredCount: records.filter((r) => r.status === 'expired').length,
+      pendingCount: records.filter((r) => r.status === 'pending').length,
+      totalRecords: records.length,
+      monthlyPremium,
+      totalCoverage,
+    };
+  }, [records]);
+
+  const myColumns = [
+    {
+      title: '被保人',
+      dataIndex: 'insured_name',
+      key: 'insured_name',
+      width: 100,
+    },
+    {
+      title: '关系',
+      dataIndex: 'relation',
+      key: 'relation',
+      width: 100,
+      render: (text: string, record: InsuranceRecord) => (
+        <Tag color={text === '本人' ? 'blue' : 'orange'}>
+          {text === '家属' ? `${text}（${record.relation_detail}）` : text}
+        </Tag>
+      ),
+    },
+    {
+      title: '保险类型',
+      dataIndex: 'insurance_type',
+      key: 'insurance_type',
+      ellipsis: true,
+    },
+    {
+      title: '保单号',
+      dataIndex: 'policy_number',
+      key: 'policy_number',
+      ellipsis: true,
+    },
+    {
+      title: '保障期限',
+      key: 'coverage_period',
+      width: 200,
+      render: (_: any, record: InsuranceRecord) => (
+        <span style={{ fontSize: 12 }}>
+          {record.coverage_start} ~ {record.coverage_end}
+        </span>
+      ),
+    },
+    {
+      title: '月保费',
+      dataIndex: 'monthly_premium',
+      key: 'monthly_premium',
+      width: 100,
+      align: 'right' as const,
+      render: (val: number) => <Text style={{ color: '#1890ff' }}>¥{val.toLocaleString()}</Text>,
+    },
+    {
+      title: '保额',
+      dataIndex: 'coverage_amount',
+      key: 'coverage_amount',
+      width: 100,
+      align: 'right' as const,
+      render: (val: number) => <Text>{val / 10000}万</Text>,
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 90,
+      render: (status: string) => {
+        const map: Record<string, { color: string; label: string }> = {
+          active: { color: 'success', label: '生效中' },
+          expired: { color: 'error', label: '已到期' },
+          pending: { color: 'processing', label: '待生效' },
+          cancelled: { color: 'default', label: '已取消' },
+        };
+        const config = map[status] || map.active;
+        return <Tag color={config.color}>{config.label}</Tag>;
+      },
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 90,
+      fixed: 'right' as const,
+      render: (_: any, record: InsuranceRecord) => (
+        <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => onViewDetail(record)}>
+          查看
+        </Button>
+      ),
+    },
+  ];
+
+  if (records.length === 0) {
+    return (
+      <Card>
+        <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+          <HeartOutlined style={{ fontSize: 48, marginBottom: 16 }} />
+          <div>暂无投保记录</div>
+          {!isAdminUser && (
+            <Text type="secondary" style={{ fontSize: 12, marginTop: 8, display: 'block' }}>
+              如需投保请联系 HR 部门
+            </Text>
+          )}
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <div>
+      {/* 个人信息头 */}
+      <Card
+        style={{ marginBottom: 16 }}
+        title={
+          <Space>
+            <UserOutlined style={{ color: '#1890ff' }} />
+            <span style={{ fontWeight: 600 }}>{user?.display_name} 的投保情况</span>
+            {isAdminUser && <Tag color="gold">管理员视图(查看本人)</Tag>}
+          </Space>
+        }
+        extra={
+          <Space>
+            <Tag color="blue">工号 {user?.username}</Tag>
+            {user?.department && <Tag color="cyan">{user.department}</Tag>}
+          </Space>
+        }
+      >
+        <Row gutter={16}>
+          <Col span={4}>
+            <Statistic
+              title="在保记录"
+              value={myStats.activeCount}
+              suffix={` / ${myStats.totalRecords}`}
+              prefix={<SafetyOutlined />}
+              valueStyle={{ color: '#52c41a' }}
+            />
+          </Col>
+          <Col span={5}>
+            <Statistic
+              title="月保费合计"
+              value={myStats.monthlyPremium}
+              prefix={<DollarOutlined />}
+              suffix="元"
+              valueStyle={{ color: '#1890ff' }}
+            />
+          </Col>
+          <Col span={5}>
+            <Statistic
+              title="累计保额"
+              value={myStats.totalCoverage / 10000}
+              suffix="万元"
+              prefix={<FileProtectOutlined />}
+              valueStyle={{ color: '#722ed1' }}
+            />
+          </Col>
+          <Col span={5}>
+            <Statistic
+              title="待生效"
+              value={myStats.pendingCount}
+              prefix={<CalendarOutlined />}
+              valueStyle={{ color: myStats.pendingCount > 0 ? '#faad14' : undefined }}
+            />
+          </Col>
+          <Col span={5}>
+            <Statistic
+              title="已到期"
+              value={myStats.expiredCount}
+              prefix={<FileTextOutlined />}
+              valueStyle={{ color: myStats.expiredCount > 0 ? '#ff4d4f' : undefined }}
+            />
+          </Col>
+        </Row>
+      </Card>
+
+      {/* 个人投保明细 */}
+      <Card
+        title={
+          <Space>
+            <HeartOutlined />
+            <span>投保明细</span>
+            <Text type="secondary" style={{ fontSize: 12, fontWeight: 'normal' }}>
+              (含家属投保)
+            </Text>
+          </Space>
+        }
+      >
+        <Table
+          columns={myColumns}
+          dataSource={records}
+          rowKey="id"
+          pagination={false}
+          size="middle"
+          scroll={{ x: 900 }}
+        />
+      </Card>
+
+      {/* 关联保单概要 */}
+      {policies.length > 0 && (
+        <Card
+          style={{ marginTop: 16 }}
+          title={
+            <Space>
+              <FileProtectOutlined />
+              <span>关联保单概要</span>
+            </Space>
+          }
+        >
+          <Row gutter={16}>
+            {policies.map((policy) => (
+              <Col span={12} key={policy.id} style={{ marginBottom: 16 }}>
+                <Card
+                  size="small"
+                  style={{ background: '#fafafa' }}
+                  title={
+                    <Space>
+                      <Tag color="blue">{policy.policy_number}</Tag>
+                      <span>{policy.policy_name}</span>
+                    </Space>
+                  }
+                >
+                  <Descriptions size="small" column={1}>
+                    <Descriptions.Item label="保险类型">
+                      <Tag color="blue">{policy.insurance_type}</Tag>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="合同期间">{policy.contract_period}</Descriptions.Item>
+                    <Descriptions.Item label="保障概要">{policy.coverage_summary}</Descriptions.Item>
+                  </Descriptions>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            详细保单条款请前往 <strong>保单查询</strong> Tab 查看完整内容
+          </Text>
+        </Card>
+      )}
     </div>
   );
 };
