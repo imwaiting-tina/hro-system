@@ -5,6 +5,7 @@ import {
 } from 'antd';
 import { PlusOutlined, BellOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../../stores/authStore';
+import RecruitmentNav from '../../../components/RecruitmentNav';
 import supabase from '../../../utils/supabase';
 import type { ResumeStatus, InterviewRound } from '../../../types';
 import dayjs from 'dayjs';
@@ -415,6 +416,7 @@ const InterviewPage: React.FC = () => {
 
   return (
     <div>
+      <RecruitmentNav />
       <div className="page-header">
         <Title level={2}>面试安排</Title>
         <Text type="secondary">

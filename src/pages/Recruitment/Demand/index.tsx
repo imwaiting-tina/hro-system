@@ -5,6 +5,7 @@ import {
 } from 'antd';
 import { PlusOutlined, EyeOutlined, EditOutlined, DeleteOutlined, SendOutlined } from '@ant-design/icons';
 import { useAuthStore, canEdit, canApprove } from '../../../stores/authStore';
+import RecruitmentNav from '../../../components/RecruitmentNav';
 import supabase from '../../../utils/supabase';
 import type { RecruitmentStatus } from '../../../types';
 import dayjs from 'dayjs';
@@ -165,6 +166,7 @@ const DemandPage: React.FC = () => {
 
   return (
     <div>
+      <RecruitmentNav />
       <div className="page-header">
         <Title level={2}>招聘需求管理</Title>
         <Text type="secondary">发布和管理招聘需求，包含《聘用员工申请表》的审批流程</Text>

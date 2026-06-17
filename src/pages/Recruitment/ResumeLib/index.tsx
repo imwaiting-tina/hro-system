@@ -3,6 +3,7 @@ import {
   Table, Button, Tag, Space, Modal, Form, Input, Select, message,
   Typography, Card, Upload, Descriptions, Progress, Popconfirm, Alert
 } from 'antd';
+import RecruitmentNav from '../../../components/RecruitmentNav';
 import type { UploadFile } from 'antd';
 import {
   PlusOutlined, EyeOutlined, EditOutlined, DeleteOutlined,
@@ -416,6 +417,7 @@ const ResumeLibPage: React.FC = () => {
 
   return (
     <div>
+      <RecruitmentNav />
       <div className="page-header">
         <Title level={2}>简历库</Title>
         <Text type="secondary">管理所有候选人简历，支持批量上传 PDF/图片自动识别字段</Text>

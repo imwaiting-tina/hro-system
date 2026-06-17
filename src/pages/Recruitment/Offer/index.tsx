@@ -8,6 +8,7 @@ import {
   CloseCircleOutlined, MailOutlined, UserSwitchOutlined,
 } from '@ant-design/icons';
 import { useAuthStore, canEdit } from '../../../stores/authStore';
+import RecruitmentNav from '../../../components/RecruitmentNav';
 import supabase from '../../../utils/supabase';
 import type { OfferStatus } from '../../../types';
 import dayjs from 'dayjs';
@@ -154,6 +155,7 @@ const OfferPage: React.FC = () => {
 
   return (
     <div>
+      <RecruitmentNav />
       <div className="page-header">
         <Title level={2}>Offer管理</Title>
         <Text type="secondary">
