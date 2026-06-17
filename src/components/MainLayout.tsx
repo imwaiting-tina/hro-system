@@ -84,7 +84,7 @@ const menuConfig = [
     label: '员工合同管理',
     roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head'] as UserRole[],
     children: [
-      { key: '/contract/list', icon: <FileTextOutlined />, label: '合同台账' },
+      { key: '/employment/employees', icon: <TeamOutlined />, label: '员工档案' },
       { key: '/employment/evaluation', icon: <AuditOutlined />, label: '试用期/实习评估' },
       { key: '/employment/renewal', icon: <FileDoneOutlined />, label: '续签管理' },
     ],
@@ -122,7 +122,6 @@ const menuConfig = [
       { key: '/employee-service/sport-card', icon: <TeamOutlined />, label: 'HRO运动卡' },
       { key: '/employee-service/apartment', icon: <HomeOutlined />, label: '人才公寓' },
       { key: '/employee-service/query', icon: <FileSearchOutlined />, label: '员工查询' },
-      { key: '/employment/employees', icon: <TeamOutlined />, label: '员工档案' },
     ],
   },
 
