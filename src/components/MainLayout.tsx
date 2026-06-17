@@ -48,11 +48,11 @@ const menuConfig = [
     roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head', 'employee'] as UserRole[],
   },
 
-  // 二、HR核心流程管理
+  // 二、员工流程
   {
     key: 'hr-core',
     icon: <TeamOutlined />,
-    label: 'HR核心流程',
+    label: '员工流程',
     roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head'] as UserRole[],
     children: [
       { key: '/recruitment/resume', icon: <FileSearchOutlined />, label: '招聘管理' },
