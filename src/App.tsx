@@ -34,6 +34,11 @@ import OffboardingNewPage from './pages/Offboarding/OffboardingNew';
 import OffboardingHandoverPage from './pages/Offboarding/OffboardingHandover';
 import OffboardingSettlementPage from './pages/Offboarding/OffboardingSettlement';
 
+// 新模块
+import ContractPage from './pages/Contract';
+import PayrollPage from './pages/Payroll';
+import EmployeeServicePage from './pages/EmployeeService';
+
 // 路由守卫
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, loading } = useAuthStore();
@@ -85,10 +90,14 @@ const App: React.FC = () => {
             >
               <Route index element={<Navigate to="/workplace" replace />} />
               <Route path="workplace" element={<WorkplacePage />} />
+
+              {/* 招聘管理（属于HR核心流程） */}
               <Route path="recruitment/demand" element={<DemandPage />} />
               <Route path="recruitment/resume" element={<ResumeLibPage />} />
               <Route path="recruitment/interview" element={<InterviewPage />} />
               <Route path="recruitment/offer" element={<OfferPage />} />
+
+              {/* 入职管理（属于HR核心流程） */}
               <Route path="onboarding" element={<OnboardingPage />}>
                 <Route index element={<Navigate to="/onboarding/docs" replace />} />
                 <Route path="docs" element={<OnboardingDocs />} />
@@ -97,6 +106,8 @@ const App: React.FC = () => {
                 <Route path="training" element={<StaffTraining />} />
                 <Route path="info" element={<EmployeeInfoForm />} />
               </Route>
+
+              {/* 在职管理（子功能分布在合同管理和员工服务下） */}
               <Route path="employment" element={<EmploymentPage />}>
                 <Route index element={<Navigate to="/employment/evaluation" replace />} />
                 <Route path="evaluation" element={<EvaluationPage />} />
@@ -104,10 +115,16 @@ const App: React.FC = () => {
                 <Route path="transfer" element={<TransferPage />} />
                 <Route path="employees" element={<EmployeeListPage />} />
               </Route>
+
+              {/* 日常管理（属于HR核心流程） */}
               <Route path="daily" element={<DailyPage />} />
               <Route path="daily/retirement" element={<RetirementPage />} />
               <Route path="daily/insurance" element={<InsurancePage />} />
+
+              {/* 辞退管理 */}
               <Route path="resignation" element={<ResignationPage />} />
+
+              {/* 离职管理（属于HR核心流程） */}
               <Route path="offboarding" element={<OffboardingPage />}>
                 <Route index element={<Navigate to="/offboarding/list" replace />} />
                 <Route path="list" element={<OffboardingListPage />} />
@@ -115,6 +132,32 @@ const App: React.FC = () => {
                 <Route path=":id/handover" element={<OffboardingHandoverPage />} />
                 <Route path=":id/settlement" element={<OffboardingSettlementPage />} />
               </Route>
+
+              {/* 员工合同管理（新模块） */}
+              <Route path="contract" element={<ContractPage />} />
+              <Route path="contract/list" element={<ContractPage />} />
+
+              {/* Payroll 薪酬管理（新模块） */}
+              <Route path="payroll" element={<PayrollPage />} />
+              <Route path="payroll/monthly" element={<PayrollPage />} />
+              <Route path="payroll/attendance" element={<PayrollPage />} />
+              <Route path="payroll/leave" element={<PayrollPage />} />
+              <Route path="payroll/social-insurance" element={<PayrollPage />} />
+              <Route path="payroll/payslip" element={<PayrollPage />} />
+
+              {/* 员工服务（新模块） */}
+              <Route path="employee-service" element={<EmployeeServicePage />} />
+              <Route path="employee-service/assets" element={<EmployeeServicePage />} />
+              <Route path="employee-service/accounts" element={<EmployeeServicePage />} />
+              <Route path="employee-service/benefits-policy" element={<EmployeeServicePage />} />
+              <Route path="employee-service/benefits-issue" element={<EmployeeServicePage />} />
+              <Route path="employee-service/benefits-exec" element={<EmployeeServicePage />} />
+              <Route path="employee-service/benefits-mgmt" element={<EmployeeServicePage />} />
+              <Route path="employee-service/sport-card" element={<EmployeeServicePage />} />
+              <Route path="employee-service/apartment" element={<EmployeeServicePage />} />
+              <Route path="employee-service/query" element={<EmployeeServicePage />} />
+
+              {/* 审批管理 */}
               <Route path="approval" element={<ApprovalPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/login" replace />} />

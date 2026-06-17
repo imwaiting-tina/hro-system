@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layout, Menu, Dropdown, Avatar, Space, Button, Typography } from 'antd';
+import { Layout, Menu, Dropdown, Avatar, Space, Badge, Button, Typography } from 'antd';
 import {
   HomeOutlined,
   TeamOutlined,
@@ -19,6 +19,15 @@ import {
   SwapOutlined,
   LeftOutlined,
   RightOutlined,
+  BellOutlined,
+  DollarOutlined,
+  ContainerOutlined,
+  CustomerServiceOutlined,
+  FileDoneOutlined,
+  SolutionOutlined,
+  CrownOutlined,
+  GiftOutlined,
+  BankOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
@@ -27,72 +36,97 @@ import type { UserRole } from '../types';
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
 
-// 菜单配置 - 基于角色的可见性
+// ============================================================
+// 菜单配置 - 六大模块 + 审批管理
+// ============================================================
 const menuConfig = [
+  // 一、工作台
   {
     key: '/workplace',
     icon: <HomeOutlined />,
     label: '工作台',
     roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head', 'employee'] as UserRole[],
   },
+
+  // 二、HR核心流程管理
   {
-    key: 'recruitment',
+    key: 'hr-core',
     icon: <TeamOutlined />,
-    label: '招聘管理',
+    label: 'HR核心流程',
     roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head'] as UserRole[],
     children: [
+      // 招聘管理
       { key: '/recruitment/resume', icon: <FileSearchOutlined />, label: '简历库' },
       { key: '/recruitment/demand', icon: <FileTextOutlined />, label: '招聘需求' },
       { key: '/recruitment/interview', icon: <CalendarOutlined />, label: '面试安排' },
       { key: '/recruitment/offer', icon: <SendOutlined />, label: 'Offer管理' },
-    ],
-  },
-  {
-    key: 'onboarding',
-    icon: <UserAddOutlined />,
-    label: '入职管理',
-    roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head'] as UserRole[],
-    children: [
+      // 入职管理
       { key: '/onboarding/docs', icon: <FileTextOutlined />, label: '入职文件' },
+      { key: '/onboarding/info', icon: <IdcardOutlined />, label: '信息登记' },
       { key: '/onboarding/guide', icon: <ScheduleOutlined />, label: '入职引导' },
       { key: '/onboarding/admin', icon: <SettingOutlined />, label: '行政准备' },
       { key: '/onboarding/training', icon: <TeamOutlined />, label: '员工培训' },
-      { key: '/onboarding/info', icon: <IdcardOutlined />, label: '信息登记' },
-    ],
-  },
-  {
-    key: 'employment',
-    icon: <IdcardOutlined />,
-    label: '在职管理',
-    roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head'] as UserRole[],
-    children: [
-      { key: '/employment/evaluation', icon: <AuditOutlined />, label: '试用期/实习评估' },
-      { key: '/employment/renewal', icon: <FileTextOutlined />, label: '续签管理' },
+      // 员工流动
       { key: '/employment/transfer', icon: <SwapOutlined />, label: '员工流动' },
-      { key: '/employment/employees', icon: <TeamOutlined />, label: '员工档案' },
-    ],
-  },
-  {
-    key: 'daily',
-    icon: <ScheduleOutlined />,
-    label: '日常管理',
-    roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head', 'employee'] as UserRole[],
-    children: [
+      // 日常管理
       { key: '/daily', icon: <ScheduleOutlined />, label: '日常事务' },
-      { key: '/daily/retirement', icon: <TeamOutlined />, label: '退休管理' },
-      { key: '/daily/insurance', icon: <SafetyOutlined />, label: '保险模块' },
-    ],
-  },
-  {
-    key: 'offboarding',
-    icon: <LogoutOutlined />,
-    label: '离职管理',
-    roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head', 'employee'] as UserRole[],
-    children: [
-      { key: '/offboarding/list', icon: <FileTextOutlined />, label: '离职列表', roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head'] as UserRole[] },
+      { key: '/daily/retirement', icon: <CrownOutlined />, label: '退休管理' },
+      // 离职管理
+      { key: '/offboarding/list', icon: <LogoutOutlined />, label: '离职列表', roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head'] as UserRole[] },
       { key: '/offboarding/new', icon: <SendOutlined />, label: '发起离职', roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head', 'employee'] as UserRole[] },
     ],
   },
+
+  // 三、员工合同管理
+  {
+    key: 'contract',
+    icon: <ContainerOutlined />,
+    label: '员工合同管理',
+    roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head'] as UserRole[],
+    children: [
+      { key: '/contract/list', icon: <FileTextOutlined />, label: '合同台账' },
+      { key: '/employment/evaluation', icon: <AuditOutlined />, label: '试用期/实习评估' },
+      { key: '/employment/renewal', icon: <FileDoneOutlined />, label: '续签管理' },
+    ],
+  },
+
+  // 四、Payroll（薪酬管理）
+  {
+    key: 'payroll',
+    icon: <DollarOutlined />,
+    label: 'Payroll',
+    roles: ['super_admin', 'main_admin', 'sub_admin'] as UserRole[],
+    children: [
+      { key: '/payroll/monthly', icon: <CalendarOutlined />, label: '月度Payroll' },
+      { key: '/payroll/attendance', icon: <ScheduleOutlined />, label: '考勤记录' },
+      { key: '/payroll/leave', icon: <FileTextOutlined />, label: '请假管理' },
+      { key: '/payroll/social-insurance', icon: <BankOutlined />, label: '社保/公积金' },
+      { key: '/daily/insurance', icon: <SafetyOutlined />, label: '商业保险' },
+      { key: '/payroll/payslip', icon: <FileDoneOutlined />, label: '工资单' },
+    ],
+  },
+
+  // 五、员工服务（含大后台行政服务）
+  {
+    key: 'employee-service',
+    icon: <CustomerServiceOutlined />,
+    label: '员工服务',
+    roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head', 'employee'] as UserRole[],
+    children: [
+      { key: '/employee-service/assets', icon: <SolutionOutlined />, label: '座位/工牌/电脑' },
+      { key: '/employee-service/accounts', icon: <UserOutlined />, label: '系统账户' },
+      { key: '/employee-service/benefits-policy', icon: <GiftOutlined />, label: '福利政策' },
+      { key: '/employee-service/benefits-issue', icon: <GiftOutlined />, label: '福利发放' },
+      { key: '/employee-service/benefits-exec', icon: <GiftOutlined />, label: '福利执行' },
+      { key: '/employee-service/benefits-mgmt', icon: <GiftOutlined />, label: '福利管理' },
+      { key: '/employee-service/sport-card', icon: <TeamOutlined />, label: 'HRO运动卡' },
+      { key: '/employee-service/apartment', icon: <HomeOutlined />, label: '人才公寓' },
+      { key: '/employee-service/query', icon: <FileSearchOutlined />, label: '员工查询' },
+      { key: '/employment/employees', icon: <TeamOutlined />, label: '员工档案' },
+    ],
+  },
+
+  // 六、审批管理
   {
     key: '/approval',
     icon: <AuditOutlined />,
@@ -136,7 +170,7 @@ const MainLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuthStore();
-  const [openKeys, setOpenKeys] = React.useState<string[]>(['recruitment', 'onboarding', 'employment', 'offboarding']);
+  const [openKeys, setOpenKeys] = React.useState<string[]>(['hr-core', 'contract', 'payroll', 'employee-service']);
   const [collapsed, setCollapsed] = React.useState(false);
 
   // 根据当前路径自动展开对应的父菜单
@@ -145,9 +179,21 @@ const MainLayout: React.FC = () => {
     const segments = path.split('/').filter(Boolean);
     if (segments.length > 0) {
       const parentKey = segments[0];
+      // 映射旧路由段到新父菜单 key
+      const parentMap: Record<string, string> = {
+        recruitment: 'hr-core',
+        onboarding: 'hr-core',
+        offboarding: 'hr-core',
+        daily: 'hr-core',
+        employment: 'contract',
+        contract: 'contract',
+        payroll: 'payroll',
+        'employee-service': 'employee-service',
+      };
+      const mappedKey = parentMap[parentKey] || parentKey;
       setOpenKeys((prev) => {
-        if (!prev.includes(parentKey)) {
-          return [...prev, parentKey];
+        if (!prev.includes(mappedKey)) {
+          return [...prev, mappedKey];
         }
         return prev;
       });
@@ -191,7 +237,18 @@ const MainLayout: React.FC = () => {
           <span className="logo">HRO人事管理系统</span>
         </div>
 
-        <div className="user-info">
+        <div className="user-info" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          {/* 消息通知 */}
+          <Badge count={0} showZero={false}>
+            <Button
+              type="text"
+              icon={<BellOutlined style={{ fontSize: 18, color: 'rgba(255,255,255,0.85)' }} />}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36 }}
+              onClick={() => {}}
+            />
+          </Badge>
+
+          {/* 账号管理 */}
           <Dropdown
             menu={{
               items: userMenuItems,
