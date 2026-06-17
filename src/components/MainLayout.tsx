@@ -55,12 +55,8 @@ const menuConfig = [
     label: 'HR核心流程',
     roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head'] as UserRole[],
     children: [
-      // 招聘管理分组
-      { type: 'group' as const, label: '📋 招聘管理' },
-      { key: '/recruitment/resume', icon: <FileSearchOutlined />, label: '简历库' },
-      { key: '/recruitment/demand', icon: <FileTextOutlined />, label: '招聘需求' },
-      { key: '/recruitment/interview', icon: <CalendarOutlined />, label: '面试安排' },
-      { key: '/recruitment/offer', icon: <SendOutlined />, label: 'Offer管理' },
+      // 招聘管理（点击进入，右侧导览卡片切换子页面）
+      { key: '/recruitment/resume', icon: <FileSearchOutlined />, label: '招聘管理' },
       // 入职管理分组
       { type: 'group' as const, label: '📝 入职管理' },
       { key: '/onboarding/docs', icon: <FileTextOutlined />, label: '入职文件' },
