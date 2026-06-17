@@ -55,26 +55,11 @@ const menuConfig = [
     label: 'HR核心流程',
     roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head'] as UserRole[],
     children: [
-      // 招聘管理（点击进入，右侧导览卡片切换子页面）
       { key: '/recruitment/resume', icon: <FileSearchOutlined />, label: '招聘管理' },
-      // 入职管理分组
-      { type: 'group' as const, label: '📝 入职管理' },
-      { key: '/onboarding/docs', icon: <FileTextOutlined />, label: '入职文件' },
-      { key: '/onboarding/info', icon: <IdcardOutlined />, label: '信息登记' },
-      { key: '/onboarding/guide', icon: <ScheduleOutlined />, label: '入职引导' },
-      { key: '/onboarding/admin', icon: <SettingOutlined />, label: '行政准备' },
-      { key: '/onboarding/training', icon: <TeamOutlined />, label: '员工培训' },
-      // 员工流动分组
-      { type: 'group' as const, label: '🔄 员工流动' },
+      { key: '/onboarding/docs', icon: <UserAddOutlined />, label: '入职管理' },
       { key: '/employment/transfer', icon: <SwapOutlined />, label: '员工流动' },
-      // 日常管理分组
-      { type: 'group' as const, label: '📅 日常管理' },
-      { key: '/daily', icon: <ScheduleOutlined />, label: '日常事务' },
-      { key: '/daily/retirement', icon: <CrownOutlined />, label: '退休管理' },
-      // 离职管理分组
-      { type: 'group' as const, label: '👋 离职管理' },
-      { key: '/offboarding/list', icon: <LogoutOutlined />, label: '离职列表', roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head'] as UserRole[] },
-      { key: '/offboarding/new', icon: <SendOutlined />, label: '发起离职', roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head', 'employee'] as UserRole[] },
+      { key: '/daily', icon: <ScheduleOutlined />, label: '日常管理' },
+      { key: '/offboarding/list', icon: <LogoutOutlined />, label: '离职管理' },
     ],
   },
 

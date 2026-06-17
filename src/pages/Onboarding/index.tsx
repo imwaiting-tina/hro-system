@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Select, Typography, Space, Tag, Card, message } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import { Outlet, useOutletContext } from 'react-router-dom';
+import OnboardingNav from '../../components/OnboardingNav';
 import supabase from '../../utils/supabase';
 
 const { Title, Text } = Typography;
@@ -102,6 +103,7 @@ const OnboardingPage: React.FC = () => {
 
   return (
     <div>
+      <OnboardingNav />
       <div className="page-header">
         <Title level={2}>入职管理</Title>
         <Text type="secondary">管理新员工入职全流程：文件准备、引导任务、行政安排、培训及信息登记</Text>

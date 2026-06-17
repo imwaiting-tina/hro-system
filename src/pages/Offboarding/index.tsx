@@ -3,6 +3,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Typography, Select, Card, Space, Spin, message } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import { useAuthStore, canEdit } from '../../stores/authStore';
+import OffboardingNav from '../../components/OffboardingNav';
 import supabase from '../../utils/supabase';
 
 const { Title, Text } = Typography;
@@ -79,6 +80,7 @@ const OffboardingPage: React.FC = () => {
   return (
     <OffboardingContext.Provider value={{ selectedEmployeeId, setSelectedEmployeeId, employees, refreshCases, caseRefreshKey }}>
       <div>
+        <OffboardingNav />
         <div className="page-header">
           <Title level={2}>离职管理</Title>
           <Text type="secondary">管理员工主动离职、被动离职全流程：申请→审批→交接→结算</Text>
