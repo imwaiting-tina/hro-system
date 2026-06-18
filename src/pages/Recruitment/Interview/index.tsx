@@ -135,7 +135,7 @@ const InterviewPage: React.FC = () => {
     setLoading(false);
   };
 
-  useEffect(() => { fetchData(); }, [modalVisible, resultModalVisible, hireInfoModalVisible, finalApprovalModalVisible, communicationModalVisible]);
+  useEffect(() => { fetchData(); }, []);
 
   const canArrange = isTina;
 
@@ -343,11 +343,12 @@ const InterviewPage: React.FC = () => {
     // 如果二面推荐，提示填写拟录用信息
     if (round === 'second' && values.result === 'passed') {
       await supabase.from('resumes').update({ status: 'interviewing_final' }).eq('id', resumeId);
-      message.success('二面结果：推荐。请填写拟录用信息');
+      // 重新查询面试记录，获取最新数据
+      const { data: freshData } = await supabase.from('interviews').select('*').eq('id', interview.id).single();
       setResultModalVisible(false);
-      // 打开拟录用信息弹窗
+      resultForm.resetFields();
       hireInfoForm.resetFields();
-      setSelectedInterview({ ...interview, result: 'passed' });
+      setSelectedInterview(freshData || { ...interview, result: 'passed' });
       setHireInfoModalVisible(true);
       fetchData();
       return;
