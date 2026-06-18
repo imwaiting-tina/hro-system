@@ -352,9 +352,21 @@ const InterviewPage: React.FC = () => {
       return;
     }
 
-    // 如果终面推荐，提示Jenny审批拟录用信息
+    // 如果终面推荐，自动弹出拟录用信息审批弹窗（仅Jenny可操作）
     if (round === 'final' && values.result === 'passed') {
-      message.success('终面结果：推荐。等待最高负责人审批拟录用信息');
+      setResultModalVisible(false);
+      // 重新查询面试记录，获取二面填写的拟录用信息
+      const { data: freshData } = await supabase.from('interviews').select('*').eq('id', interview.id).single();
+      if (freshData?.hire_info) {
+        finalApprovalForm.setFieldsValue(freshData.hire_info);
+      } else {
+        finalApprovalForm.resetFields();
+        message.warning('未找到二面填写的拟录用信息，请先确认二面部门负责人已填写');
+      }
+      setSelectedInterview(freshData || { ...interview, result: 'passed' });
+      setFinalApprovalModalVisible(true);
+      fetchData();
+      return;
     }
 
     // 如果放弃，更新简历状态
