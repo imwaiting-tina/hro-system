@@ -364,8 +364,8 @@ const InterviewPage: React.FC = () => {
         finalApprovalForm.resetFields();
         message.warning('未找到二面填写的拟录用信息，请先确认二面部门负责人已填写');
       }
-      // 终面推荐后更新简历状态为 offer 阶段
-      await supabase.from('resumes').update({ status: 'offer' }).eq('id', resumeId);
+      // 终面推荐后更新简历状态为待发Offer
+      await supabase.from('resumes').update({ status: 'pending_offer' }).eq('id', resumeId);
       setSelectedInterview(freshData || { ...interview, result: 'passed' });
       setFinalApprovalModalVisible(true);
       fetchData();
