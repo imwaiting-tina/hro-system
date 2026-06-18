@@ -331,7 +331,6 @@ const InterviewPage: React.FC = () => {
     // 更新面试记录
     await supabase.from('interviews').update({
       result: values.result,
-      feedback: values.feedback || '',
       pdf_url: pdfUrl,
       result_note: values.result === 'passed' ? '推荐' : '放弃',
     }).eq('id', interview.id);
@@ -781,10 +780,6 @@ const InterviewPage: React.FC = () => {
               <Radio.Button value="passed"><CheckCircleOutlined /> 推荐</Radio.Button>
               <Radio.Button value="failed"><CloseCircleOutlined /> 放弃</Radio.Button>
             </Radio.Group>
-          </Form.Item>
-
-          <Form.Item name="feedback" label="面试评价" rules={[{ required: true, message: '请填写面试评价' }]}>
-            <TextArea rows={4} placeholder="请详细填写面试评价，包括：候选人表现、技能匹配度、沟通能力、建议等" />
           </Form.Item>
 
           {/* PDF上传入口 */}
