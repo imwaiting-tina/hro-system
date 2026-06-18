@@ -732,7 +732,7 @@ const InterviewPage: React.FC = () => {
       <div className="page-header">
         <Title level={2}>面试安排</Title>
         <Text type="secondary">
-          面试流程：一面（人事面试）→ 二面（部门面试）→ 终面（Jenny终审）→ 入职前沟通 → Offer发放
+          面试流程：一面（人事面试）→ 二面（部门面试）→ 终面（Jenny终审）→ Jenny审批拟录用信息 → 入职前沟通 → Offer发放
         </Text>
       </div>
 
@@ -743,8 +743,8 @@ const InterviewPage: React.FC = () => {
           <Text type="secondary">
             1. <Text strong>一面（人事面试）</Text>：HR安排面试时间与方式（线下预约会议室 / 线上腾讯会议），面试完成后选择结果（推荐/放弃），上传《求职申请表》第二页第一部分扫描件。推荐→自动触发二面安排<br/>
             2. <Text strong>二面（用人部门面试）</Text>：部门负责人面试，选择结果（推荐/放弃），上传《求职申请表》第二页第二部分扫描件。推荐→填写拟录用信息<br/>
-            3. <Text strong>终面（最高负责人面试）</Text>：Jenny及黄一萧参与，选择结果（推荐/放弃）。推荐→Jenny审批拟录用信息（可修改后确认）→进入Offer发放<br/>
-            4. <Text strong>入职前沟通</Text>：终面通过后，HR发起入职前沟通，确认入职时间、薪资细节等
+            3. <Text strong>终面（最高负责人面试）</Text>：Jenny及黄一萧参与，选择结果（推荐/放弃）。推荐→Jenny审批拟录用信息（可修改后确认）→进入入职沟通环节<br/>
+            4. <Text strong>入职前沟通</Text>：Jenny审批通过后，HR发起入职前沟通，安排沟通时间与方式（线上腾讯会议/线下面谈），确认入职时间、薪资细节、Offer变动字段等，沟通确认后推送至Offer发放
           </Text><br/>
           <Text type="warning" style={{ fontSize: 12 }}>
             📎 相关文件：《求职申请表》采用线下填写方式，纸质版由候选人手工填写后扫描为PDF上传。第一页为基础信息，第二页为各轮面试评价记录，第三页为建议薪资等录用信息。
