@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import {
   Table, Button, Tag, Space, Modal, Form, Input, Select, InputNumber,
-  DatePicker, message, Typography, Card, Popconfirm, Descriptions, Radio
+  DatePicker, message, Typography, Card, Popconfirm, Descriptions, Radio,
+  Steps, Timeline
 } from 'antd';
-import { PlusOutlined, EyeOutlined, EditOutlined, SendOutlined } from '@ant-design/icons';
+import {
+  PlusOutlined, EyeOutlined, EditOutlined, SendOutlined,
+  CheckOutlined, CloseCircleOutlined
+} from '@ant-design/icons';
 import { useAuthStore, canEdit, canApprove } from '../../../stores/authStore';
 import RecruitmentNav from '../../../components/RecruitmentNav';
 import supabase from '../../../utils/supabase';
@@ -15,8 +19,8 @@ const { TextArea } = Input;
 
 const statusMap: Record<RecruitmentStatus, { label: string; color: string }> = {
   draft: { label: '草稿', color: 'default' },
-  pending_dept: { label: '待部门确认', color: 'processing' },
-  pending_hr: { label: '待人事确认', color: 'warning' },
+  pending_dept: { label: '待部门负责人审批', color: 'processing' },
+  pending_hr: { label: '待人事负责人审批', color: 'warning' },
   pending_final: { label: '待Jenny终审', color: 'warning' },
   approved: { label: '已批准', color: 'success' },
   rejected: { label: '已驳回', color: 'error' },
@@ -86,6 +90,11 @@ const DemandPage: React.FC = () => {
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
   const [form] = Form.useForm();
 
+  // 驳回弹窗
+  const [rejectModalVisible, setRejectModalVisible] = useState(false);
+  const [rejectRecord, setRejectRecord] = useState<any>(null);
+  const [rejectForm] = Form.useForm();
+
   // 跟踪招聘原因和工作经历是否选了"其他"
   const [reasonOther, setReasonOther] = useState(false);
   const [experienceOther, setExperienceOther] = useState(false);
@@ -106,6 +115,108 @@ const DemandPage: React.FC = () => {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  // ============ 审批流程操作 ============
+
+  // 提交审批：草稿 → 待部门负责人审批
+  const handleSubmitApproval = async (record: any) => {
+    await supabase
+      .from('recruitment_requests')
+      .update({
+        status: 'pending_dept',
+        submitted_at: new Date().toISOString(),
+      })
+      .eq('id', record.id);
+    message.success('已提交审批，等待部门负责人审批');
+    fetchData();
+  };
+
+  // 批准：推进到下一级
+  const handleApprove = async (record: any) => {
+    const currentStatus = record.status;
+    let nextStatus: RecruitmentStatus;
+    let approverField = '';
+
+    if (currentStatus === 'pending_dept') {
+      nextStatus = 'pending_hr';
+      approverField = 'dept_approved_at';
+    } else if (currentStatus === 'pending_hr') {
+      nextStatus = 'pending_final';
+      approverField = 'hr_approved_at';
+    } else if (currentStatus === 'pending_final') {
+      nextStatus = 'approved';
+      approverField = 'final_approved_at';
+    } else {
+      return;
+    }
+
+    const updateData: any = {
+      status: nextStatus,
+      [approverField]: new Date().toISOString(),
+    };
+
+    // 终审通过时，同步至人事端
+    if (currentStatus === 'pending_final') {
+      updateData.approved_at = new Date().toISOString();
+      updateData.approved_by = user?.id;
+    }
+
+    await supabase
+      .from('recruitment_requests')
+      .update(updateData)
+      .eq('id', record.id);
+
+    if (currentStatus === 'pending_final') {
+      message.success('终审通过！需求已生效，已同步至人事端');
+    } else {
+      message.success('审批通过，已进入下一级审批');
+    }
+    fetchData();
+  };
+
+  // 打开驳回弹窗
+  const openRejectModal = (record: any) => {
+    setRejectRecord(record);
+    rejectForm.resetFields();
+    setRejectModalVisible(true);
+  };
+
+  // 确认驳回：退回申请人
+  const handleRejectConfirm = async () => {
+    try {
+      const values = await rejectForm.validateFields();
+      const rejectReason = values.reject_reason;
+
+      await supabase
+        .from('recruitment_requests')
+        .update({
+          status: 'rejected',
+          reject_reason: rejectReason,
+          rejected_at: new Date().toISOString(),
+          rejected_by: user?.id,
+        })
+        .eq('id', rejectRecord.id);
+
+      message.success(`已驳回，已退回申请人（原因：${rejectReason}）`);
+      setRejectModalVisible(false);
+      setRejectRecord(null);
+      fetchData();
+    } catch {
+      // 验证失败，不关闭弹窗
+    }
+  };
+
+  // 发布：已批准 → 已发布
+  const handlePublish = async (record: any) => {
+    await supabase
+      .from('recruitment_requests')
+      .update({ status: 'published' })
+      .eq('id', record.id);
+    message.success('需求已发布');
+    fetchData();
+  };
+
+  // ============ 表单操作 ============
 
   const handleSubmit = async (values: any) => {
     // 处理性别要求 - 多选存储为逗号分隔字符串
@@ -165,12 +276,6 @@ const DemandPage: React.FC = () => {
     fetchData();
   };
 
-  const handleStatusChange = async (id: string, newStatus: RecruitmentStatus) => {
-    await supabase.from('recruitment_requests').update({ status: newStatus }).eq('id', id);
-    message.success('状态已更新');
-    fetchData();
-  };
-
   const openEdit = (record: any) => {
     setEditingRecord(record);
     // 反解析多选字段
@@ -208,7 +313,66 @@ const DemandPage: React.FC = () => {
     setGenderValue(val || []);
   };
 
-  // 表格列定义
+  // ============ 审批流程 Steps 计算 ============
+
+  // 计算审批流程当前步骤
+  const getApprovalStep = (status: string): number => {
+    const stepMap: Record<string, number> = {
+      draft: -1,
+      pending_dept: 0,
+      pending_hr: 1,
+      pending_final: 2,
+      approved: 3,
+      rejected: -1,
+      published: 3,
+      closed: 3,
+    };
+    return stepMap[status] ?? -1;
+  };
+
+  // 构建审批流程时间线
+  const getApprovalTimeline = (record: any) => {
+    const items: any[] = [];
+
+    items.push({
+      label: '提交审批',
+      status: 'done' as const,
+      time: record.submitted_at,
+      desc: '申请人提交招聘需求审批',
+    });
+
+    // 第一级：部门负责人审批
+    if (record.status === 'pending_dept') {
+      items.push({ label: '部门负责人审批', status: 'process' as const, time: null, desc: '等待部门负责人审批' });
+    } else if (record.status === 'rejected' && !record.hr_approved_at) {
+      items.push({ label: '部门负责人审批', status: 'error' as const, time: record.rejected_at, desc: `驳回：${record.reject_reason || '-'}` });
+    } else {
+      items.push({ label: '部门负责人审批', status: 'done' as const, time: record.dept_approved_at, desc: '批准，进入下一级' });
+    }
+
+    // 第二级：人事负责人审批
+    if (record.status === 'pending_hr') {
+      items.push({ label: '人事负责人审批', status: 'process' as const, time: null, desc: '等待人事负责人审批' });
+    } else if (['pending_final', 'approved', 'published'].includes(record.status)) {
+      items.push({ label: '人事负责人审批', status: 'done' as const, time: record.hr_approved_at, desc: '批准，进入下一级' });
+    } else if (record.status === 'rejected' && record.dept_approved_at && !record.hr_approved_at) {
+      items.push({ label: '人事负责人审批', status: 'error' as const, time: record.rejected_at, desc: `驳回：${record.reject_reason || '-'}` });
+    }
+
+    // 第三级：最高负责人 Jenny 审批
+    if (record.status === 'pending_final') {
+      items.push({ label: 'Jenny终审', status: 'process' as const, time: null, desc: '等待Jenny最终审批' });
+    } else if (['approved', 'published'].includes(record.status)) {
+      items.push({ label: 'Jenny终审', status: 'done' as const, time: record.final_approved_at, desc: '终审通过，需求生效' });
+    } else if (record.status === 'rejected' && record.hr_approved_at && !record.final_approved_at) {
+      items.push({ label: 'Jenny终审', status: 'error' as const, time: record.rejected_at, desc: `驳回：${record.reject_reason || '-'}` });
+    }
+
+    return items;
+  };
+
+  // ============ 表格列定义 ============
+
   const columns = [
     {
       title: '需求编号',
@@ -250,42 +414,87 @@ const DemandPage: React.FC = () => {
     {
       title: '状态',
       dataIndex: 'status',
-      width: 120,
+      width: 140,
       render: (status: RecruitmentStatus) => (
         <Tag color={statusMap[status]?.color}>{statusMap[status]?.label}</Tag>
       ),
     },
     {
       title: '操作',
-      width: 280,
+      width: 340,
       render: (_: any, record: any) => (
-        <Space size="small">
+        <Space size="small" wrap>
           <Button size="small" icon={<EyeOutlined />} onClick={() => { setSelectedRecord(record); setDetailVisible(true); }}>
             详情
           </Button>
+
+          {/* 草稿状态：编辑 + 提交审批 */}
           {canEdit(user!.role) && record.status === 'draft' && (
-            <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>
-              编辑
+            <>
+              <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>
+                编辑
+              </Button>
+              <Popconfirm title="确认提交审批？" description="提交后将进入三级审批流程" onConfirm={() => handleSubmitApproval(record)}>
+                <Button size="small" type="primary" icon={<SendOutlined />}>
+                  提交审批
+                </Button>
+              </Popconfirm>
+            </>
+          )}
+
+          {/* 第一级：部门负责人审批 */}
+          {canApprove(user!.role) && record.status === 'pending_dept' && (
+            <>
+              <Popconfirm title="确认批准？" description="批准后将进入人事负责人审批" onConfirm={() => handleApprove(record)}>
+                <Button size="small" type="primary" icon={<CheckOutlined />}>
+                  批准
+                </Button>
+              </Popconfirm>
+              <Button size="small" danger icon={<CloseCircleOutlined />} onClick={() => openRejectModal(record)}>
+                驳回
+              </Button>
+            </>
+          )}
+
+          {/* 第二级：人事负责人审批 */}
+          {canApprove(user!.role) && record.status === 'pending_hr' && (
+            <>
+              <Popconfirm title="确认批准？" description="批准后将进入Jenny终审" onConfirm={() => handleApprove(record)}>
+                <Button size="small" type="primary" icon={<CheckOutlined />}>
+                  批准
+                </Button>
+              </Popconfirm>
+              <Button size="small" danger icon={<CloseCircleOutlined />} onClick={() => openRejectModal(record)}>
+                驳回
+              </Button>
+            </>
+          )}
+
+          {/* 第三级：最高负责人 Jenny 终审 */}
+          {user?.role === 'super_admin' && record.status === 'pending_final' && (
+            <>
+              <Popconfirm title="确认终审通过？" description="终审通过后需求生效，同步至人事端" onConfirm={() => handleApprove(record)}>
+                <Button size="small" type="primary" icon={<CheckOutlined />}>
+                  终审通过
+                </Button>
+              </Popconfirm>
+              <Button size="small" danger icon={<CloseCircleOutlined />} onClick={() => openRejectModal(record)}>
+                驳回
+              </Button>
+            </>
+          )}
+
+          {/* 已批准：发布 */}
+          {record.status === 'approved' && canEdit(user!.role) && (
+            <Button size="small" icon={<SendOutlined />} onClick={() => handlePublish(record)}>
+              发布
             </Button>
           )}
-          {canApprove(user!.role) && record.status === 'pending_dept' && (
-            <Popconfirm title="确认通过?" onConfirm={() => handleStatusChange(record.id, 'pending_hr')}>
-              <Button size="small" type="primary">通过</Button>
-            </Popconfirm>
-          )}
-          {canApprove(user!.role) && record.status === 'pending_hr' && (
-            <Popconfirm title="确认通过?" onConfirm={() => handleStatusChange(record.id, 'pending_final')}>
-              <Button size="small" type="primary">HR确认</Button>
-            </Popconfirm>
-          )}
-          {user?.role === 'super_admin' && record.status === 'pending_final' && (
-            <Popconfirm title="终审通过?" onConfirm={() => handleStatusChange(record.id, 'approved')}>
-              <Button size="small" type="primary">终审通过</Button>
-            </Popconfirm>
-          )}
-          {record.status === 'approved' && canEdit(user!.role) && (
-            <Button size="small" icon={<SendOutlined />} onClick={() => handleStatusChange(record.id, 'published')}>
-              发布
+
+          {/* 已驳回：可重新编辑提交 */}
+          {canEdit(user!.role) && record.status === 'rejected' && (
+            <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>
+              修改重新提交
             </Button>
           )}
         </Space>
@@ -293,7 +502,8 @@ const DemandPage: React.FC = () => {
     },
   ];
 
-  // 详情弹窗中显示招聘原因（含"其他"补充说明）
+  // ============ 详情弹窗渲染辅助 ============
+
   const renderReason = (record: any) => {
     if (!record.recruitment_reason) return '-';
     if (record.recruitment_reason === '其他' && record.recruitment_reason_other) {
@@ -302,7 +512,6 @@ const DemandPage: React.FC = () => {
     return record.recruitment_reason;
   };
 
-  // 详情弹窗中显示工作经历（含"其他"补充说明）
   const renderExperience = (record: any) => {
     if (!record.work_experience) return '-';
     if (record.work_experience === '其他' && record.work_experience_other) {
@@ -311,7 +520,6 @@ const DemandPage: React.FC = () => {
     return record.work_experience;
   };
 
-  // 详情弹窗中显示性别要求（含年龄范围）
   const renderGender = (record: any) => {
     if (!record.gender_requirement) return '-';
     let text = record.gender_requirement;
@@ -321,12 +529,14 @@ const DemandPage: React.FC = () => {
     return text;
   };
 
+  const fmtTime = (v: string) => v ? dayjs(v).format('YYYY-MM-DD HH:mm') : null;
+
   return (
     <div>
       <RecruitmentNav />
       <div className="page-header">
         <Title level={2}>招聘需求管理</Title>
-        <Text type="secondary">发布和管理招聘需求，包含《聘用员工申请表》的审批流程</Text>
+        <Text type="secondary">发布和管理招聘需求，包含《聘用员工申请表》的三级审批流程</Text>
       </div>
 
       <Card>
@@ -345,7 +555,7 @@ const DemandPage: React.FC = () => {
           rowKey="id"
           loading={loading}
           pagination={{ pageSize: 10 }}
-          scroll={{ x: 1200 }}
+          scroll={{ x: 1300 }}
         />
       </Card>
 
@@ -505,16 +715,59 @@ const DemandPage: React.FC = () => {
         </Form>
       </Modal>
 
+      {/* 驳回弹窗 */}
+      <Modal
+        title="驳回招聘需求"
+        open={rejectModalVisible}
+        onCancel={() => { setRejectModalVisible(false); setRejectRecord(null); }}
+        onOk={handleRejectConfirm}
+        okText="确认驳回"
+        okButtonProps={{ danger: true }}
+        width={500}
+      >
+        {rejectRecord && (
+          <div>
+            <Card size="small" style={{ marginBottom: 16 }}>
+              <Descriptions column={1} size="small">
+                <Descriptions.Item label="需求编号">{rejectRecord.request_no}</Descriptions.Item>
+                <Descriptions.Item label="招聘职位">{rejectRecord.position_name}</Descriptions.Item>
+                <Descriptions.Item label="当前审批级">
+                  {rejectRecord.status === 'pending_dept' && '部门负责人审批'}
+                  {rejectRecord.status === 'pending_hr' && '人事负责人审批'}
+                  {rejectRecord.status === 'pending_final' && 'Jenny终审'}
+                </Descriptions.Item>
+              </Descriptions>
+            </Card>
+            <Form form={rejectForm} layout="vertical">
+              <Form.Item
+                name="reject_reason"
+                label="驳回原因"
+                rules={[{ required: true, message: '请填写驳回原因' }]}
+              >
+                <TextArea
+                  rows={3}
+                  placeholder="请填写驳回原因，将退回申请人"
+                  showCount
+                  maxLength={200}
+                />
+              </Form.Item>
+            </Form>
+            <Text type="secondary">驳回后需求将退回申请人，申请人可修改后重新提交。</Text>
+          </div>
+        )}
+      </Modal>
+
       {/* 详情弹窗 */}
       <Modal
         title="招聘需求详情 —— 《聘用员工申请表》"
         open={detailVisible}
         onCancel={() => setDetailVisible(false)}
         footer={null}
-        width={800}
+        width={850}
       >
         {selectedRecord && (
           <>
+            {/* 基础信息卡片 */}
             <Card size="small" title="基础信息" style={{ marginBottom: 12 }}>
               <Descriptions column={2} bordered size="small">
                 <Descriptions.Item label="需求编号">{selectedRecord.request_no}</Descriptions.Item>
@@ -537,7 +790,8 @@ const DemandPage: React.FC = () => {
               </Descriptions>
             </Card>
 
-            <Card size="small" title="招聘条件">
+            {/* 招聘条件卡片 */}
+            <Card size="small" title="招聘条件" style={{ marginBottom: 12 }}>
               <Descriptions column={2} bordered size="small">
                 <Descriptions.Item label="招聘原因" span={2}>{renderReason(selectedRecord)}</Descriptions.Item>
                 <Descriptions.Item label="性别要求" span={2}>{renderGender(selectedRecord)}</Descriptions.Item>
@@ -549,6 +803,89 @@ const DemandPage: React.FC = () => {
                 <Descriptions.Item label="其他要求" span={2}>{selectedRecord.other_requirements || '-'}</Descriptions.Item>
                 <Descriptions.Item label="职位描述" span={2}>{selectedRecord.brief_job_description || '-'}</Descriptions.Item>
               </Descriptions>
+            </Card>
+
+            {/* 审批流程卡片 */}
+            <Card
+              size="small"
+              title={
+                <Space>
+                  <span>审批流程</span>
+                  {selectedRecord.status === 'rejected' && (
+                    <Tag color="error">已驳回</Tag>
+                  )}
+                  {selectedRecord.status === 'approved' && (
+                    <Tag color="success">已批准</Tag>
+                  )}
+                  {selectedRecord.status === 'published' && (
+                    <Tag color="blue">已发布</Tag>
+                  )}
+                </Space>
+              }
+            >
+              <Steps
+                current={getApprovalStep(selectedRecord.status)}
+                status={selectedRecord.status === 'rejected' ? 'error' : 'process'}
+                direction="vertical"
+                size="small"
+                items={[
+                  {
+                    title: '部门负责人审批',
+                    description: selectedRecord.dept_approved_at
+                      ? `已批准 · ${fmtTime(selectedRecord.dept_approved_at)}`
+                      : selectedRecord.status === 'pending_dept'
+                        ? '待审批中...'
+                        : '等待中',
+                  },
+                  {
+                    title: '人事负责人审批',
+                    description: selectedRecord.hr_approved_at
+                      ? `已批准 · ${fmtTime(selectedRecord.hr_approved_at)}`
+                      : selectedRecord.status === 'pending_hr'
+                        ? '待审批中...'
+                        : '等待中',
+                  },
+                  {
+                    title: 'Jenny终审',
+                    description: selectedRecord.final_approved_at
+                      ? `终审通过 · ${fmtTime(selectedRecord.final_approved_at)}`
+                      : selectedRecord.status === 'pending_final'
+                        ? '待终审中...'
+                        : '等待中',
+                  },
+                ]}
+              />
+
+              {/* 驳回信息 */}
+              {selectedRecord.status === 'rejected' && (
+                <div style={{ marginTop: 16, padding: 12, background: '#fff2f0', borderRadius: 6, border: '1px solid #ffccc7' }}>
+                  <Text strong style={{ color: '#ff4d4f' }}>
+                    <CloseCircleOutlined /> 驳回原因
+                  </Text>
+                  <div style={{ marginTop: 8 }}>
+                    <Text>{selectedRecord.reject_reason || '未填写'}</Text>
+                  </div>
+                  <div style={{ marginTop: 4 }}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      驳回时间：{fmtTime(selectedRecord.rejected_at) || '-'}
+                    </Text>
+                  </div>
+                </div>
+              )}
+
+              {/* 终审通过信息 */}
+              {selectedRecord.status === 'approved' && (
+                <div style={{ marginTop: 16, padding: 12, background: '#f6ffed', borderRadius: 6, border: '1px solid #b7eb8f' }}>
+                  <Text strong style={{ color: '#52c41a' }}>
+                    <CheckOutlined /> 需求已生效
+                  </Text>
+                  <div style={{ marginTop: 4 }}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      批准时间：{fmtTime(selectedRecord.approved_at) || '-'} · 已同步至人事端
+                    </Text>
+                  </div>
+                </div>
+              )}
             </Card>
           </>
         )}
