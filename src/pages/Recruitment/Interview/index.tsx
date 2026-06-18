@@ -98,6 +98,7 @@ const InterviewPage: React.FC = () => {
   const [hireInfoModalVisible, setHireInfoModalVisible] = useState(false);
   const [finalApprovalModalVisible, setFinalApprovalModalVisible] = useState(false);
   const [communicationModalVisible, setCommunicationModalVisible] = useState(false);
+  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedInterview, setSelectedInterview] = useState<any>(null);
   const [form] = Form.useForm();
@@ -150,14 +151,24 @@ const InterviewPage: React.FC = () => {
     return interview?.round === 'second' && isBuHead && interview.result === 'passed' && !interview.hire_info_approved;
   };
 
-  // Jenny 可以做终面拟录用审批
+  // Jenny 可以做终面拟录用审批（审批前可反复打开修改）
   const canApproveHireInfo = (interview: any) => {
     return interview?.round === 'final' && isJenny && interview.result === 'passed' && interview.hire_info && !interview.hire_info_approved;
   };
 
-  // Tina 可以安排入职前沟通
+  // Jenny 审批通过后可查看审批结果
+  const canViewApprovedHireInfo = (interview: any) => {
+    return interview?.round === 'final' && isJenny && interview.result === 'passed' && interview.hire_info_approved;
+  };
+
+  // Tina 可以安排入职前沟通（审批通过后）
   const canArrangeCommunication = (interview: any) => {
     return isTina && interview?.round === 'final' && interview.result === 'passed' && interview.hire_info_approved && !interview.communication_arranged;
+  };
+
+  // Tina 可以在沟通完成后确认并推送Offer
+  const canConfirmCommunication = (interview: any) => {
+    return isTina && interview?.round === 'final' && interview.result === 'passed' && interview.hire_info_approved && interview.communication_arranged && !interview.communication_confirmed;
   };
 
   // 根据候选人已有面试记录确定可安排的轮次
@@ -416,7 +427,19 @@ const InterviewPage: React.FC = () => {
       return;
     }
 
-    message.success('拟录用信息已审批通过，可进入入职前沟通环节');
+    // 通知人事Tina：拟录用信息已审批，可安排入职沟通
+    const tina = users.find((u: any) => u.username === 'tina');
+    const candidateName = resumes.find((r: any) => r.id === selectedInterview.resume_id)?.candidate_name || '未知';
+    if (tina) {
+      await supabase.from('notifications').insert({
+        interview_id: selectedInterview.id,
+        user_id: tina.id,
+        title: `拟录用信息已审批：${candidateName}`,
+        content: `候选人【${candidateName}】的终面拟录用信息已由Jenny审批通过。\n请尽快安排入职前沟通，确认入职时间、薪资等细节。`,
+      });
+    }
+
+    message.success('拟录用信息已审批通过，已通知人事安排入职前沟通');
     setFinalApprovalModalVisible(false);
     finalApprovalForm.resetFields();
     setSelectedInterview(null);
@@ -428,11 +451,25 @@ const InterviewPage: React.FC = () => {
     if (!selectedInterview) return;
     const candidateName = resumes.find((r: any) => r.id === selectedInterview.resume_id)?.candidate_name || '未知';
 
+    // 合并offer变动字段到hire_info
+    const updatedHireInfo = {
+      ...(selectedInterview.hire_info || {}),
+      start_work_date: values.start_work_date?.toISOString() || selectedInterview.hire_info?.start_work_date,
+      suggested_monthly_income: values.suggested_monthly_income ?? selectedInterview.hire_info?.suggested_monthly_income,
+      probation_income: values.probation_income ?? selectedInterview.hire_info?.probation_income,
+      offer_changes: values.offer_changes || '',
+    };
+
     const { error } = await supabase.from('interviews').update({
       communication_arranged: true,
       communication_time: values.communication_time?.toISOString(),
+      communication_method: values.communication_method || 'offline',
+      communication_location: values.communication_location || '',
+      communication_meeting_link: values.communication_meeting_link || '',
+      communication_meeting_id: values.communication_meeting_id || '',
       communication_participants: values.participants || [],
       communication_notes: values.notes || '',
+      hire_info: updatedHireInfo,
     }).eq('id', selectedInterview.id);
 
     if (error) {
@@ -447,7 +484,7 @@ const InterviewPage: React.FC = () => {
           interview_id: selectedInterview.id,
           user_id: uid,
           title: `入职前沟通安排：${candidateName}`,
-          content: `候选人【${candidateName}】的入职前沟通已安排。\n时间：${values.communication_time?.format('YYYY-MM-DD HH:mm')}\n沟通内容：确认入职时间、薪资细节等`,
+          content: `候选人【${candidateName}】的入职前沟通已安排。\n时间：${values.communication_time?.format('YYYY-MM-DD HH:mm')}\n方式：${values.communication_method === 'online' ? '线上（腾讯会议）' : '线下面谈'}\n${values.communication_method === 'online' ? `会议链接：${values.communication_meeting_link || '待定'}` : `地点：${values.communication_location || '待定'}`}\n沟通内容：确认入职时间、薪资细节等`,
         });
       }
     }
@@ -455,6 +492,42 @@ const InterviewPage: React.FC = () => {
     message.success('入职前沟通已安排，已通知参与人');
     setCommunicationModalVisible(false);
     communicationForm.resetFields();
+    setSelectedInterview(null);
+    fetchData();
+  };
+
+  // 人事确认沟通完成，推送到Offer
+  const handleConfirmCommunication = async () => {
+    if (!selectedInterview) return;
+    const candidateName = resumes.find((r: any) => r.id === selectedInterview.resume_id)?.candidate_name || '未知';
+
+    const { error } = await supabase.from('interviews').update({
+      communication_confirmed: true,
+      communication_confirmed_at: new Date().toISOString(),
+      communication_confirmed_by: user?.id,
+    }).eq('id', selectedInterview.id);
+
+    if (error) {
+      message.error('确认失败：' + error.message);
+      return;
+    }
+
+    // 更新简历状态为待发Offer
+    await supabase.from('resumes').update({ status: 'pending_offer' }).eq('id', selectedInterview.resume_id);
+
+    // 通知Jenny：沟通已完成，已推送至Offer阶段
+    const jenny = users.find((u: any) => u.role === 'super_admin');
+    if (jenny) {
+      await supabase.from('notifications').insert({
+        interview_id: selectedInterview.id,
+        user_id: jenny.id,
+        title: `入职沟通已完成：${candidateName}`,
+        content: `候选人【${candidateName}】的入职前沟通已完成并确认。\n已推送至Offer阶段，可安排发放Offer。`,
+      });
+    }
+
+    message.success('入职沟通已确认完成，已推送至Offer阶段');
+    setConfirmModalVisible(false);
     setSelectedInterview(null);
     fetchData();
   };
@@ -537,6 +610,8 @@ const InterviewPage: React.FC = () => {
           return <Tag color="warning">待填写</Tag>;
         }
         if (record.round === 'final' && record.result === 'passed') {
+          if (record.communication_confirmed) return <Tag color="success">已推送Offer</Tag>;
+          if (record.communication_arranged) return <Tag color="processing">待确认沟通</Tag>;
           if (record.hire_info_approved) return <Tag color="success">已审批</Tag>;
           if (record.hire_info) return <Tag color="processing">待Jenny审批</Tag>;
           return <Tag color="warning">待二面填写</Tag>;
@@ -584,9 +659,30 @@ const InterviewPage: React.FC = () => {
             <Button size="small" type="primary" onClick={() => {
               setSelectedInterview(record);
               communicationForm.resetFields();
+              // 预填拟录用信息中的到岗日期等
+              if (record.hire_info) {
+                communicationForm.setFieldsValue({
+                  start_work_date: record.hire_info.start_work_date ? dayjs(record.hire_info.start_work_date) : undefined,
+                  suggested_monthly_income: record.hire_info.suggested_monthly_income,
+                  probation_income: record.hire_info.probation_income,
+                });
+              }
+              // 默认选HR(tina)和用人部门负责人
+              const tinaUser = users.find((u: any) => u.username === 'tina');
+              const buHead = users.find((u: any) => u.role === 'bu_head');
+              const defaultParticipants = [tinaUser?.id, buHead?.id].filter(Boolean) as string[];
+              communicationForm.setFieldsValue({ participants: defaultParticipants, communication_method: 'offline' });
               setCommunicationModalVisible(true);
             }}>
               安排入职前沟通
+            </Button>
+          )}
+          {canConfirmCommunication(record) && (
+            <Button size="small" type="primary" style={{ background: '#52c41a', borderColor: '#52c41a' }} onClick={() => {
+              setSelectedInterview(record);
+              setConfirmModalVisible(true);
+            }}>
+              确认沟通完成→推送Offer
             </Button>
           )}
         </Space>
@@ -885,29 +981,132 @@ const InterviewPage: React.FC = () => {
       {/* 入职前沟通弹窗 */}
       <Modal title="安排入职前沟通" open={communicationModalVisible}
         onCancel={() => { setCommunicationModalVisible(false); communicationForm.resetFields(); setSelectedInterview(null); }}
-        onOk={() => communicationForm.submit()} width={600}>
+        onOk={() => communicationForm.submit()} width={800}
+        okText="安排沟通并通知参与人">
         <Form form={communicationForm} layout="vertical" onFinish={handleCommunicationSubmit}>
           <Card size="small" style={{ marginBottom: 16, background: '#f0f5ff', border: '1px solid #adc6ff' }}>
             <Text>
               终面已通过，拟录用信息已审批。请安排入职前沟通，通知参与人（HR和用人部门负责人）。
-              <br/>沟通内容：确认入职时间、薪资细节等。
+              <br/>沟通目的：确认最终入职时间、薪资等细节，沟通中可能调整到岗日期等字段。
             </Text>
           </Card>
-          <Form.Item name="communication_time" label="沟通时间" rules={[{ required: true, message: '请选择沟通时间' }]}>
-            <DatePicker showTime style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item name="participants" label="参与人" rules={[{ required: true, message: '请选择参与人' }]}>
-            <Select mode="multiple" placeholder="选择参与人（HR和用人部门负责人）"
-              options={users.map((u: any) => ({
-                label: `${u.display_name}（${u.department || u.role}）`,
-                value: u.id,
-              }))}
-            />
-          </Form.Item>
+
+          <Card size="small" title="沟通安排" style={{ marginBottom: 16 }}>
+            <Form.Item name="communication_time" label="沟通时间" rules={[{ required: true, message: '请选择沟通时间' }]}>
+              <DatePicker showTime style={{ width: '100%' }} />
+            </Form.Item>
+            <Form.Item name="communication_method" label="沟通方式" rules={[{ required: true }]}>
+              <Radio.Group>
+                <Radio.Button value="offline">线下面谈</Radio.Button>
+                <Radio.Button value="online">线上会议</Radio.Button>
+              </Radio.Group>
+            </Form.Item>
+            <Form.Item
+              noStyle
+              shouldUpdate={(prev, cur) => prev.communication_method !== cur.communication_method}
+            >
+              {({ getFieldValue }) => {
+                const method = getFieldValue('communication_method');
+                if (method === 'online') {
+                  return (
+                    <>
+                      <Form.Item name="communication_meeting_link" label="腾讯会议链接" rules={[{ required: true, message: '请填写腾讯会议链接' }]}>
+                        <Input placeholder="https://meeting.tencent.com/..." />
+                      </Form.Item>
+                      <Form.Item name="communication_meeting_id" label="会议号" rules={[{ required: true, message: '请填写会议号' }]}>
+                        <Input placeholder="例如：123-456-789" />
+                      </Form.Item>
+                    </>
+                  );
+                }
+                return (
+                  <Form.Item name="communication_location" label="线下地点" rules={[{ required: true, message: '请填写沟通地点' }]}>
+                    <Input placeholder="会议室名称" />
+                  </Form.Item>
+                );
+              }}
+            </Form.Item>
+            <Form.Item name="participants" label="参与人" rules={[{ required: true, message: '请选择参与人' }]}>
+              <Select mode="multiple" placeholder="选择参与人（HR和用人部门负责人）"
+                options={users.map((u: any) => ({
+                  label: `${u.display_name}（${u.department || u.role}）`,
+                  value: u.id,
+                }))}
+              />
+            </Form.Item>
+          </Card>
+
+          <Card size="small" title="Offer变动字段（沟通中可能调整）" style={{ marginBottom: 16, background: '#fffbe6', border: '1px solid #ffe58f' }}>
+            <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 12 }}>
+              以下字段已预填拟录用信息中的数据，沟通中如有变动可直接修改。确认后更新到拟录用信息中。
+            </Text>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0 16px' }}>
+              <Form.Item name="start_work_date" label="到岗日期">
+                <DatePicker style={{ width: '100%' }} placeholder="预计入职日期" />
+              </Form.Item>
+              <Form.Item name="suggested_monthly_income" label="税前月收入">
+                <InputNumber style={{ width: '100%' }} placeholder="可能调整的薪资" />
+              </Form.Item>
+              <Form.Item name="probation_income" label="试用期收入">
+                <InputNumber style={{ width: '100%' }} placeholder="可能调整的试用期薪资" />
+              </Form.Item>
+            </div>
+            <Form.Item name="offer_changes" label="变动说明">
+              <TextArea rows={2} placeholder="记录沟通中确认的变动内容，如：到岗日期延后至X月X日、薪资调整为XX等" />
+            </Form.Item>
+          </Card>
+
           <Form.Item name="notes" label="沟通备注">
-            <TextArea rows={3} placeholder="确认入职时间、薪资细节等" />
+            <TextArea rows={3} placeholder="其他沟通内容备注" />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* 确认沟通完成弹窗 */}
+      <Modal title="确认入职沟通完成" open={confirmModalVisible}
+        onCancel={() => { setConfirmModalVisible(false); setSelectedInterview(null); }}
+        onOk={() => handleConfirmCommunication()} width={600}
+        okText="确认完成，推送至Offer" okButtonProps={{ type: 'primary', style: { background: '#52c41a', borderColor: '#52c41a' } }}>
+        {selectedInterview && (
+          <div>
+            <Card size="small" style={{ marginBottom: 16, background: '#f6ffed', border: '1px solid #b7eb8f' }}>
+              <Text>
+                <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                {' '}确认入职前沟通已完成后，候选人将推送至Offer阶段。
+              </Text>
+            </Card>
+            <Card size="small" title="沟通信息" style={{ marginBottom: 16 }}>
+              <Descriptions column={1} size="small">
+                <Descriptions.Item label="候选人">
+                  {resumes.find((r: any) => r.id === selectedInterview.resume_id)?.candidate_name || '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label="沟通时间">
+                  {selectedInterview.communication_time ? dayjs(selectedInterview.communication_time).format('YYYY-MM-DD HH:mm') : '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label="参与人">
+                  {(selectedInterview.communication_participants || []).map((id: string) =>
+                    users.find((u: any) => u.id === id)?.display_name || id.slice(0, 8)
+                  ).join('、')}
+                </Descriptions.Item>
+                {selectedInterview.hire_info?.offer_changes && (
+                  <Descriptions.Item label="变动说明">
+                    {selectedInterview.hire_info.offer_changes}
+                  </Descriptions.Item>
+                )}
+                {selectedInterview.hire_info?.start_work_date && (
+                  <Descriptions.Item label="确认到岗日期">
+                    {dayjs(selectedInterview.hire_info.start_work_date).format('YYYY-MM-DD')}
+                  </Descriptions.Item>
+                )}
+              </Descriptions>
+            </Card>
+            <Card size="small" style={{ background: '#fffbe6', border: '1px solid #ffe58f' }}>
+              <Text type="warning">
+                ⚠️ 确认后候选人状态将变为「待发Offer」，不可撤回。请确保沟通已完成且信息无误。
+              </Text>
+            </Card>
+          </div>
+        )}
       </Modal>
 
       {/* 详情弹窗 */}
@@ -997,7 +1196,8 @@ const InterviewPage: React.FC = () => {
                     {
                       title: '入职前沟通',
                       description: '确认入职时间、薪资细节等',
-                      status: selectedInterview.communication_arranged ? 'finish' : 'wait',
+                      status: selectedInterview.communication_confirmed ? 'finish' :
+                              selectedInterview.communication_arranged ? 'process' : 'wait',
                     },
                   ]}
                 />
@@ -1009,21 +1209,47 @@ const InterviewPage: React.FC = () => {
 
             {/* 入职前沟通信息 */}
             {selectedInterview.communication_arranged && (
-              <Card size="small" title="入职前沟通" style={{ marginTop: 16 }}>
+              <Card size="small" title="入职前沟通" style={{ marginTop: 16 }}
+                extra={selectedInterview.communication_confirmed
+                  ? <Tag color="success">已完成确认</Tag>
+                  : <Tag color="processing">待人事确认</Tag>}>
                 <Descriptions column={1} size="small">
                   <Descriptions.Item label="沟通时间">
                     {selectedInterview.communication_time
                       ? dayjs(selectedInterview.communication_time).format('YYYY-MM-DD HH:mm')
                       : '-'}
                   </Descriptions.Item>
+                  <Descriptions.Item label="沟通方式">
+                    {selectedInterview.communication_method === 'online' ? '线上（腾讯会议）' : '线下面谈'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="地点/会议链接">
+                    {selectedInterview.communication_method === 'online'
+                      ? selectedInterview.communication_meeting_link || selectedInterview.communication_meeting_id || '-'
+                      : selectedInterview.communication_location || '-'}
+                  </Descriptions.Item>
                   <Descriptions.Item label="参与人">
                     {(selectedInterview.communication_participants || []).map((id: string) =>
                       users.find((u: any) => u.id === id)?.display_name || id.slice(0, 8)
                     ).join('、')}
                   </Descriptions.Item>
+                  {selectedInterview.hire_info?.offer_changes && (
+                    <Descriptions.Item label="Offer变动说明">
+                      {selectedInterview.hire_info.offer_changes}
+                    </Descriptions.Item>
+                  )}
+                  {selectedInterview.hire_info?.start_work_date && (
+                    <Descriptions.Item label="确认到岗日期">
+                      {dayjs(selectedInterview.hire_info.start_work_date).format('YYYY-MM-DD')}
+                    </Descriptions.Item>
+                  )}
                   {selectedInterview.communication_notes && (
                     <Descriptions.Item label="备注">
                       {selectedInterview.communication_notes}
+                    </Descriptions.Item>
+                  )}
+                  {selectedInterview.communication_confirmed && (
+                    <Descriptions.Item label="确认人">
+                      {users.find((u: any) => u.id === selectedInterview.communication_confirmed_by)?.display_name || '-'}
                     </Descriptions.Item>
                   )}
                 </Descriptions>
