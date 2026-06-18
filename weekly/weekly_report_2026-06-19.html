@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HRO人事管理系统 · 项目周报 2026-06-16至06-19</title>
+<style>
+  :root {
+    --blue:    #1A73E8;
+    --blue-lt: #E8F0FE;
+    --green:   #188038;
+    --green-lt:#E6F4EA;
+    --orange:  #E8710A;
+    --orange-lt:#FEF7E0;
+    --red:     #D92E20;
+    --teal:    #006B6B;
+    --teal-lt: #E0F7F7;
+    --purple:  #6A1B9A;
+    --purple-lt:#F3E5F5;
+    --gray:    #5F6368;
+    --dark:    #202124;
+    --border:  #DADCE0;
+    --bg:      #F8F9FA;
+    --white:   #FFFFFF;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--dark);
+    line-height: 1.6;
+  }
+
+  /* ── HERO ─────────────────────────────────────── */
+  .hero {
+    background: linear-gradient(135deg, var(--blue) 0%, #0D47A1 100%);
+    color: #FFF;
+    padding: 48px 40px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: "";
+    position: absolute;
+    right: -60px; top: -60px;
+    width: 300px; height: 300px;
+    background: rgba(255,255,255,0.07);
+    border-radius: 50%;
+  }
+  .hero h1 { font-size: 28px; font-weight: 700; margin-bottom: 6px; }
+  .hero h2 { font-size: 16px; font-weight: 400; opacity: 0.85; margin-bottom: 18px; }
+  .hero-meta { display: flex; gap: 24px; flex-wrap: wrap; font-size: 13px; opacity: 0.9; }
+  .hero-meta span { display: flex; align-items: center; gap: 5px; }
+
+  /* ── 汇总卡片 ─────────────────────────────────── */
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+  .summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: -32px;
+    position: relative;
+    z-index: 2;
+    margin-bottom: 36px;
+  }
+  .s-card {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 20px 22px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border-top: 4px solid var(--blue);
+  }
+  .s-card.green  { border-top-color: var(--green); }
+  .s-card.orange { border-top-color: var(--orange); }
+  .s-card.purple { border-top-color: var(--purple); }
+  .s-card .label { font-size: 12px; color: var(--gray); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .s-card .value { font-size: 22px; font-weight: 700; color: var(--dark); }
+  .s-card .sub   { font-size: 12px; color: var(--gray); margin-top: 4px; }
+
+  /* ── SECTION ──────────────────────────────────── */
+  .section {
+    background: var(--white);
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    padding: 28px 32px;
+    margin-bottom: 28px;
+  }
+  .section-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title .icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .section-title .icon.blue   { background: var(--blue-lt); color: var(--blue); }
+  .section-title .icon.green  { background: var(--green-lt); color: var(--green); }
+  .section-title .icon.teal   { background: var(--teal-lt); color: var(--teal); }
+  .section-title .icon.purple { background: var(--purple-lt); color: var(--purple); }
+
+  /* ── TABLE ────────────────────────────────────── */
+  .tbl-wrap { overflow-x: auto; margin-top: 4px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead th {
+    background: var(--blue);
+    color: #FFF;
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    white-space: nowrap;
+    font-size: 12.5px;
+  }
+  thead th:first-child { border-radius: 8px 0 0 0; }
+  thead th:last-child  { border-radius: 0 8px 0 0; }
+  tbody td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tbody tr:nth-child(even) td { background: #F8F9FA; }
+  tbody tr:hover td { background: #E8F0FE; }
+
+  .tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .tag-done    { background: var(--green-lt); color: var(--green); }
+  .tag-pending { background: var(--orange-lt); color: var(--orange); }
+  .tag-progress{ background: #E8F0FE; color: var(--blue); }
+  .tag-wait    { background: #F1F3F4; color: var(--gray); }
+
+  /* ── 子标题 ──────────────────────────────────── */
+  .sub-heading {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--blue);
+    margin: 18px 0 10px;
+    padding-left: 10px;
+    border-left: 4px solid var(--blue);
+  }
+
+  /* ── 产出物卡片 ───────────────────────────────── */
+  .deliver-list { display: grid; gap: 12px; }
+  .deliver-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 18px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #FAFBFC;
+    transition: box-shadow 0.2s;
+  }
+  .deliver-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  .deliver-icon { font-size: 28px; flex-shrink: 0; line-height: 1; }
+  .deliver-body h4 { font-size: 14px; font-weight: 700; color: var(--dark); margin-bottom: 3px; }
+  .deliver-body p  { font-size: 12.5px; color: var(--gray); line-height: 1.5; }
+
+  /* ── 下周计划 ─────────────────────────────────── */
+  .next-table thead th { background: var(--teal); }
+  .next-num {
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: var(--teal);
+    color: #FFF;
+    font-size: 12px; font-weight: 700;
+  }
+
+  /* ── 风险 ─────────────────────────────────────── */
+  .risk-list { display: grid; gap: 10px; }
+  .risk-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .risk-item.red   { background: #FCE8E6; color: #C5221F; }
+  .risk-item.yellow{ background: #FEF7E0; color: #E8710A; }
+  .risk-item.green { background: var(--green-lt); color: var(--green); }
+
+  /* ── 页脚 ─────────────────────────────────────── */
+  .footer {
+    text-align: center;
+    padding: 24px;
+    font-size: 12px;
+    color: var(--gray);
+    border-top: 1px solid var(--border);
+    margin-top: 12px;
+  }
+
+  /* ── 链接 ──────────────────────────────────────── */
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ── GitHub 按钮 ──────────────────────────────── */
+  .gh-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--dark); color: #FFF;
+    padding: 6px 14px; border-radius: 20px;
+    font-size: 12px; font-weight: 600;
+    text-decoration: none;
+    margin-top: 8px;
+  }
+  .gh-badge:hover { background: #000; text-decoration: none; }
+
+  @media (max-width: 640px) {
+    .hero { padding: 32px 20px 28px; }
+    .hero h1 { font-size: 22px; }
+    .section { padding: 20px 16px; }
+    .summary-cards { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     HERO
+═════════════════════════════════════════════════ -->
+<div class="hero">
+  <div class="container">
+    <h1>📊 HRO 人事管理系统 · 项目周报</h1>
+    <h2>2026 年 6 月 16 日（周一）— 6 月 19 日（周四）</h2>
+    <div class="hero-meta">
+      <span>📅 报告日期：2026-06-19</span>
+      <span>👤 报告人：黄燕婷（Tina）</span>
+      <span>🏢 上海弈工分信息科技有限公司</span>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- ══════════════════════════════════════════════
+     汇总卡片
+═════════════════════════════════════════════════ -->
+<div class="summary-cards">
+  <div class="s-card">
+    <div class="label">系统开发</div>
+    <div class="value">10+ Commits</div>
+    <div class="sub">GitHub 自动部署</div>
+  </div>
+  <div class="s-card green">
+    <div class="label">产品文档</div>
+    <div class="value">2 份 Word</div>
+    <div class="sub">PRD V3.0 定稿</div>
+  </div>
+  <div class="s-card orange">
+    <div class="label">流程重构</div>
+    <div class="value">4 大模块</div>
+    <div class="sub">入职沟通全流程落地</div>
+  </div>
+  <div class="s-card purple">
+    <div class="label">关键进展</div>
+    <div class="value">6 大菜单</div>
+    <div class="sub">审批流 + RBAC 落地</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     一、本周工作概览
+═════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title">
+    <span class="icon blue">📋</span>
+    一、本周工作概览
+  </div>
+
+  <div class="sub-heading">【系统开发】hro-system — GitHub 提交记录</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>日期</th><th>功能模块</th><th>工作内容</th><th>状态</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>6/16</td><td>左侧菜单重构</td><td>重构为 6 大模块 + 消息通知，菜单结构更清晰</td><td><span class="tag tag-done">✅ 完成</span></td></tr>
+        <tr><td>6/16</td><td>招聘管理合并入口</td><td>招聘管理改为单一入口，子页面导航靠右侧导览卡片</td><td><span class="tag tag-done">✅ 完成</span></td></tr>
+        <tr><td>6/16</td><td>HR 核心流程精简</td><td>5 个入口，子页面导航统一到右侧导览卡片</td><td><span class="tag tag-done">✅ 完成</span></td></tr>
+        <tr><td>6/16</td><td>员工档案/合同台账</td><td>合同台账改名为员工档案，去除员工服务重复入口</td><td><span class="tag tag-done">✅ 完成</span></td></tr>
+        <tr><td>6/16</td><td>离职模块 RLS + 种子数据</td><td>提交 Supabase RLS 策略 + 测试种子数据</td><td><span class="tag tag-done">✅ 完成</span></td></tr>
+        <tr><td>6/16</td><td>我的保险 Tab</td><td>按角色控制 Tab 可见性，新增【我的保险】功能</td><td><span class="tag tag-done">✅ 完成</span></td></tr>
+        <tr><td>6/17</td><td>面试安排页面重构</td><td>按系统草稿.docx 重构面试安排页面字段与逻辑</td><td><span class="tag tag-done">✅ 完成</span></td></tr>
+        <tr><td>6/17</td><td>招聘需求三级审批</td><td>实现招聘需求三级审批流程</td><td><span class="tag tag-done">✅ 完成</span></td></tr>
+        <tr><td>6/17</td><td>终面→拟录用审批弹窗</td><td>终面推荐后自动弹出拟录用信息审批弹窗</td><td><span class="tag tag-done">✅ 完成</span></td></tr>
+        <tr><td>6/18</td><td>入职沟通全流程重构</td><td>增加时间/方式/地点/通知/Offer变动字段/沟通确认键，确认后推送 Offer</td><td><span class="tag tag-done">✅ 完成</span></td></tr>
+        <tr><td>6/18</td><td>面试流程说明卡片更新</td><td>更新流程文字：终面→Jenny审批→入职沟通→Offer发放</td><td><span class="tag tag-done">✅ 完成</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sub-heading" style="margin-top:24px;">【产品文档】PRD 与系统说明</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>日期</th><th>产出物</th><th>内容说明</th><th>状态</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>6/17</td><td>系统框架说明 Word</td><td>整理系统 8 个章节功能框架，输出《HRO系统功能框架说明.docx》</td><td><span class="tag tag-done">✅ 完成</span></td></tr>
+        <tr><td>6/18</td><td>PRD V3.0 定稿</td><td>整合 V260618 说明书 + 大框架 + 账号说明 + 补充内容清单 + 底稿，输出 12 章专业 PRD</td><td><span class="tag tag-done">✅ 完成</span></td></tr>
+        <tr><td>6/18</td><td>PRD 格式优化</td><td>调整至专业产品说明书格式，融入 12 组 Q&A 到对应章节</td><td><span class="tag tag-done">✅ 完成</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     二、关键产出物
+═════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title">
+    <span class="icon purple">📦</span>
+    二、关键产出物
+  </div>
+
+  <div class="deliver-list">
+    <div class="deliver-card">
+      <div class="deliver-icon">📄</div>
+      <div class="deliver-body">
+        <h4>HRO人事管理系统产品需求说明书(PRD)V3.0.docx</h4>
+        <p>专业 PRD 格式，12 章，含 12 组 Q&A，给技术部用于重新开发完整版本</p>
+      </div>
+    </div>
+    <div class="deliver-card">
+      <div class="deliver-icon">📄</div>
+      <div class="deliver-body">
+        <h4>HRO系统功能框架说明.docx</h4>
+        <p>8 个章节，系统大框架说明，用于内部沟通与需求对齐</p>
+      </div>
+    </div>
+    <div class="deliver-card">
+      <div class="deliver-icon">💻</div>
+      <div class="deliver-body">
+        <h4>hro-system · GitHub 仓库</h4>
+        <p>10+ commits，GitHub Pages 自动部署，线上可访问</p>
+        <a href="https://github.com/imwaiting-tina/hro-system" target="_blank" class="gh-badge">🐙 查看 GitHub 仓库</a>
+      </div>
+    </div>
+    <div class="deliver-card">
+      <div class="deliver-icon">📋</div>
+      <div class="deliver-body">
+        <h4>入职沟通全流程重构</h4>
+        <p>终面→Jenny审批→入职沟通→Offer推送，完整流程落地，已 push 部署</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     三、下周工作计划
+═════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title">
+    <span class="icon teal">📅</span>
+    三、下周工作计划（2026 年 6 月 23 日 — 6 月 27 日）
+  </div>
+
+  <div class="tbl-wrap">
+    <table class="next-table">
+      <thead>
+        <tr><th style="width:40px;text-align:center;">#</th><th>计划事项</th><th>详细说明</th><th style="width:110px;">目标完成时间</th><th style="width:90px;">状态</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="text-align:center;"><span class="next-num">1</span></td>
+          <td><strong style="color:var(--teal);">等待老板发布具体板块</strong></td>
+          <td>老板周二发布具体板块内容后，对 PRD V3.0 作针对性更新和补充</td>
+          <td>周二</td>
+          <td><span class="tag tag-wait">⏳ 待启动</span></td>
+        </tr>
+        <tr>
+          <td style="text-align:center;"><span class="next-num">2</span></td>
+          <td><strong style="color:var(--teal);">产出完整产品说明书</strong></td>
+          <td>整合老板反馈 + 具体板块需求，输出最终版完整产品说明书</td>
+          <td>周三</td>
+          <td><span class="tag tag-wait">⏳ 待启动</span></td>
+        </tr>
+        <tr>
+          <td style="text-align:center;"><span class="next-num">3</span></td>
+          <td><strong style="color:var(--teal);">与陈圆对接</strong></td>
+          <td>就完整产品说明书与陈圆进行需求对接，确认技术可行性</td>
+          <td>周四</td>
+          <td><span class="tag tag-wait">⏳ 待启动</span></td>
+        </tr>
+        <tr>
+          <td style="text-align:center;"><span class="next-num">4</span></td>
+          <td><strong style="color:var(--teal);">技术部开始系统建设</strong></td>
+          <td>技术部根据最终版产品说明书启动系统开发，排期、分工</td>
+          <td>周五</td>
+          <td><span class="tag tag-wait">⏳ 待启动</span></td>
+        </tr>
+        <tr>
+          <td style="text-align:center;"><span class="next-num">5</span></td>
+          <td><strong style="color:var(--teal);">持续迭代 hro-system 功能</strong></td>
+          <td>根据开发进度持续迭代线上系统，GitHub 自动部署</td>
+          <td>全周</td>
+          <td><span class="tag tag-progress">🔄 进行中</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     四、风险与需要协调事项
+═════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title">
+    <span class="icon blue">⚠️</span>
+    四、风险与需要协调事项
+  </div>
+
+  <div class="risk-list">
+    <div class="risk-item red">
+      🔴 老板具体板块内容尚未发布，PRD 更新需等待周二老板发布后再进行
+    </div>
+    <div class="risk-item yellow">
+      🟡 技术部系统建设排期需要与陈圆对接后确认，建议周四前完成对接
+    </div>
+    <div class="risk-item green">
+      🟢 hro-system 当前功能已覆盖招聘+入职+离职+保险，后续需持续迭代
+    </div>
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<!-- ══════════════════════════════════════════════
+     页脚
+═════════════════════════════════════════════════ -->
+<div class="footer">
+  <p>报告人：黄燕婷（Tina）｜日期：2026 年 6 月 19 日</p>
+  <p style="margin-top:6px;">
+    <a href="https://imwaiting-tina.github.io/hro-system" target="_blank">🌐 在线系统：imwaiting-tina.github.io/hro-system</a>
+    ｜
+    <a href="https://github.com/imwaiting-tina/hro-system" target="_blank">🐙 GitHub 仓库</a>
+  </p>
+</div>
+
+</body>
+</html>
