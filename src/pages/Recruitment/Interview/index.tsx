@@ -147,9 +147,9 @@ const InterviewPage: React.FC = () => {
     return false;
   };
 
-  // 部门负责人可以填二面拟录用信息
+  // 部门负责人可以填/修改二面拟录用信息（审批前都可改）
   const canFillHireInfo = (interview: any) => {
-    return interview?.round === 'second' && isBuHead && interview.result === 'passed' && !interview.hire_info;
+    return interview?.round === 'second' && isBuHead && interview.result === 'passed' && !interview.hire_info_approved;
   };
 
   // Jenny 可以做终面拟录用审批
@@ -340,10 +340,9 @@ const InterviewPage: React.FC = () => {
       message.success('一面结果：推荐。系统已记录，请安排二面');
     }
 
-    // 如果二面推荐，提示填写拟录用信息
+    // 如果二面推荐，自动弹出拟录用信息弹窗，同时列表也保留按钮入口
     if (round === 'second' && values.result === 'passed') {
       await supabase.from('resumes').update({ status: 'interviewing_final' }).eq('id', resumeId);
-      // 重新查询面试记录，获取最新数据
       const { data: freshData } = await supabase.from('interviews').select('*').eq('id', interview.id).single();
       setResultModalVisible(false);
       resultForm.resetFields();
@@ -562,10 +561,14 @@ const InterviewPage: React.FC = () => {
           {canFillHireInfo(record) && (
             <Button size="small" type="primary" onClick={() => {
               setSelectedInterview(record);
-              hireInfoForm.resetFields();
+              if (record.hire_info) {
+                hireInfoForm.setFieldsValue(record.hire_info);
+              } else {
+                hireInfoForm.resetFields();
+              }
               setHireInfoModalVisible(true);
             }}>
-              填写拟录用信息
+              {record.hire_info ? '修改拟录用信息' : '填写拟录用信息'}
             </Button>
           )}
           {canApproveHireInfo(record) && (
