@@ -1,44 +1,52 @@
 import React, { useEffect, useState } from 'react';
 import {
   Table, Button, Tag, Space, Modal, Form, Input, Select,
-  DatePicker, message, Typography, Card,
+  DatePicker, message, Typography, Card, Upload, Descriptions, Steps, Radio,
+  InputNumber, Divider,
 } from 'antd';
-import { PlusOutlined, BellOutlined } from '@ant-design/icons';
+import {
+  PlusOutlined, BellOutlined, UploadOutlined, FilePdfOutlined,
+  CheckCircleOutlined, CloseCircleOutlined,
+} from '@ant-design/icons';
 import { useAuthStore } from '../../../stores/authStore';
 import RecruitmentNav from '../../../components/RecruitmentNav';
 import supabase from '../../../utils/supabase';
 import type { ResumeStatus, InterviewRound } from '../../../types';
 import dayjs from 'dayjs';
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 
-// 面试轮次定义：key、标签、谁来决定结果、固定面试官匹配方式
+// 面试轮次定义
 const roundConfig: Record<string, {
   label: string;
   resultDecider: 'tina' | 'interviewer';
-  interviewerRoles: string[];  // 固定面试官角色
-  extraInterviewers?: string[]; // 额外面试官（按username匹配）
+  interviewerRoles: string[];
+  extraInterviewers?: string[];
+  pdfLabel: string; // 上传PDF的用途说明
 }> = {
   first:  {
-    label: '一面',
+    label: '一面（人事面试）',
     resultDecider: 'tina',
-    interviewerRoles: [],  // 固定为tina本人，不按角色匹配
+    interviewerRoles: [],
+    pdfLabel: '《求职申请表》第二页第一部分扫描件',
   },
   second: {
-    label: '二面',
+    label: '二面（用人部门面试）',
     resultDecider: 'interviewer',
-    interviewerRoles: ['bu_head'],  // BU负责人
+    interviewerRoles: ['bu_head'],
+    pdfLabel: '《求职申请表》第二页第二部分扫描件',
   },
   final:  {
-    label: '终面',
+    label: '终面（最高负责人面试）',
     resultDecider: 'interviewer',
-    interviewerRoles: ['super_admin'],  // Jenny
-    extraInterviewers: ['shaun'], // 黄一萧（按username匹配）
+    interviewerRoles: ['super_admin'],
+    extraInterviewers: ['shaun'],
+    pdfLabel: '',
   },
 };
 
-// 简历状态映射：面试轮次 → 对应简历状态
+// 简历状态映射
 const resumeStatusMap: Record<string, ResumeStatus> = {
   first:  'interviewing_first',
   second: 'interviewing_second',
@@ -59,6 +67,26 @@ const statusColor: Record<string, string> = {
   cancelled: 'warning',
 };
 
+const resultLabel: Record<string, string> = {
+  passed: '推荐',
+  failed: '放弃',
+  cancelled: '取消',
+};
+
+// 拟录用信息字段
+const hireInfoFields = [
+  { key: 'hire_company', label: '录用公司', type: 'text', placeholder: '可不填，待最高负责人确认' },
+  { key: 'hire_position', label: '录用岗位', type: 'text', placeholder: '实际录用的岗位名称' },
+  { key: 'direct_leader', label: '直属领导', type: 'text', placeholder: '汇报上级' },
+  { key: 'job_content', label: '工作内容', type: 'textarea', placeholder: '岗位职责描述' },
+  { key: 'suggested_monthly_income', label: '建议每月税前收入', type: 'number', placeholder: '薪资建议' },
+  { key: 'probation_income', label: '试用期税前收入', type: 'number', placeholder: '试用期薪资' },
+  { key: 'welfare_items', label: '福利项目', type: 'select-multi', options: ['社会保险', '商业保险', '其他'], placeholder: '多选' },
+  { key: 'start_work_date', label: '开始工作日期', type: 'date', placeholder: '预计入职日期' },
+  { key: 'contract_term', label: '合同期限', type: 'text', placeholder: '劳动合同期限' },
+  { key: 'probation_duration', label: '试用期时长', type: 'text', placeholder: '试用期月数' },
+];
+
 const InterviewPage: React.FC = () => {
   const user = useAuthStore((s) => s.user);
   const [data, setData] = useState<any[]>([]);
@@ -67,11 +95,20 @@ const InterviewPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [resultModalVisible, setResultModalVisible] = useState(false);
+  const [hireInfoModalVisible, setHireInfoModalVisible] = useState(false);
+  const [finalApprovalModalVisible, setFinalApprovalModalVisible] = useState(false);
+  const [communicationModalVisible, setCommunicationModalVisible] = useState(false);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedInterview, setSelectedInterview] = useState<any>(null);
   const [form] = Form.useForm();
   const [resultForm] = Form.useForm();
+  const [hireInfoForm] = Form.useForm();
+  const [finalApprovalForm] = Form.useForm();
+  const [communicationForm] = Form.useForm();
 
   const isTina = user?.username === 'tina';
+  const isJenny = user?.role === 'super_admin';
+  const isBuHead = user?.role === 'bu_head';
 
   const fetchData = async () => {
     setLoading(true);
@@ -84,9 +121,7 @@ const InterviewPage: React.FC = () => {
     ]);
     if (resumeList) setResumes(resumeList);
     if (userList) setUsers(userList);
-    // 非Tina用户只看分配给自己的面试
     if (interviews) {
-      // 兼容旧数据：result='pending' 字符串统一视为 null（待评定）
       const cleaned = interviews.map((iv: any) => ({
         ...iv,
         result: iv.result === 'pending' ? null : iv.result,
@@ -100,44 +135,43 @@ const InterviewPage: React.FC = () => {
     setLoading(false);
   };
 
-  useEffect(() => { fetchData(); }, [modalVisible]);
+  useEffect(() => { fetchData(); }, [modalVisible, resultModalVisible, hireInfoModalVisible, finalApprovalModalVisible, communicationModalVisible]);
 
-  // Tina 才能安排面试
   const canArrange = isTina;
-
-  // 终态结果（不可再填）
-  const isFinalResult = (result: string | null) => result && ['passed', 'failed', 'cancelled'].includes(result);
 
   // 判断当前用户是否能填该面试的结果
   const canFillResult = (interview: any) => {
-    if (!interview || isFinalResult(interview.result)) return false;
-    // 当前用户是面试官之一
+    if (!interview || (interview.result && ['passed', 'failed', 'cancelled'].includes(interview.result))) return false;
     if (interview.interviewers?.includes(user?.id)) return true;
-    // Tina 只能填一面（她是固定面试官），不能越权填二面/终面
     if (isTina && interview.round === 'first') return true;
     return false;
   };
 
-  // 根据候选人已有面试记录 + 简历状态，确定可安排的轮次
+  // 部门负责人可以填二面拟录用信息
+  const canFillHireInfo = (interview: any) => {
+    return interview?.round === 'second' && isBuHead && interview.result === 'passed' && !interview.hire_info;
+  };
+
+  // Jenny 可以做终面拟录用审批
+  const canApproveHireInfo = (interview: any) => {
+    return interview?.round === 'final' && isJenny && interview.result === 'passed' && interview.hire_info && !interview.hire_info_approved;
+  };
+
+  // Tina 可以安排入职前沟通
+  const canArrangeCommunication = (interview: any) => {
+    return isTina && interview?.round === 'final' && interview.result === 'passed' && interview.hire_info_approved && !interview.communication_arranged;
+  };
+
+  // 根据候选人已有面试记录确定可安排的轮次
   const getAvailableRounds = (resumeStatus: string, existingInterviews: any[]): InterviewRound[] => {
     const hasPassedRound = (r: string) => existingInterviews?.some((x: any) => x.round === r && x.result === 'passed');
     const hasPendingRound = (r: string) => existingInterviews?.some((x: any) => x.round === r && !x.result);
     const hasAnyRound = (r: string) => existingInterviews?.some((x: any) => x.round === r);
 
-    // 有待评定的一轮 → 不能安排新面试
-    if (hasPendingRound('first') || hasPendingRound('second') || hasPendingRound('final')) {
-      return [];
-    }
-
-    // 未安排过一面 → 可安排一面
+    if (hasPendingRound('first') || hasPendingRound('second') || hasPendingRound('final')) return [];
     if (!hasAnyRound('first')) return ['first'];
-
-    // 一面已通过 + 未安排二面 → 可安排二面
     if (hasPassedRound('first') && !hasAnyRound('second')) return ['second'];
-
-    // 二面已通过 + 未安排终面 → 可安排终面
     if (hasPassedRound('second') && !hasAnyRound('final')) return ['final'];
-
     return [];
   };
 
@@ -154,7 +188,6 @@ const InterviewPage: React.FC = () => {
     const resume = resumes.find((r: any) => r.id === resumeId);
     if (!resume) return;
 
-    // 查该候选人已有面试记录
     const { data: existing } = await supabase
       .from('interviews')
       .select('round,result')
@@ -171,19 +204,15 @@ const InterviewPage: React.FC = () => {
     }
   };
 
-  // 根据轮次自动匹配面试官
   const matchInterviewers = (round: InterviewRound) => {
     let matched: string[] = [];
     if (round === 'first') {
-      // 一面固定为 tina
       const tina = users.find((u: any) => u.username === 'tina');
       matched = tina ? [tina.id] : [];
     } else {
       const config = roundConfig[round];
       const roles = config?.interviewerRoles || [];
-      // 按角色匹配
       matched = users.filter((u: any) => roles.includes(u.role)).map((u: any) => u.id);
-      // 额外面试官（按username匹配）
       const extras = config?.extraInterviewers || [];
       const extraIds = users.filter((u: any) => extras.includes(u.username)).map((u: any) => u.id);
       matched = [...matched, ...extraIds];
@@ -197,7 +226,6 @@ const InterviewPage: React.FC = () => {
 
     const round: InterviewRound = values.round;
 
-    // 查该候选人已有的面试
     const { data: existing } = await supabase
       .from('interviews')
       .select('round,result')
@@ -206,35 +234,34 @@ const InterviewPage: React.FC = () => {
     const hasRound = (r: string) => existing?.some((x: any) => x.round === r);
     const pendingRound = existing?.find((x: any) => !x.result)?.round;
 
-    // 检查是否有待评定的面试
     if (pendingRound) {
       message.warning(`该候选人还有${roundConfig[pendingRound]?.label}未进行结果评定，请先完成`);
       return;
     }
 
-    // 不允许跳过轮次：查上一轮是否通过
     if (round === 'second' && (!hasRound('first') || !existing?.find((x: any) => x.round === 'first' && x.result === 'passed'))) {
-      message.warning('请先完成一面并通过后再安排二面');
+      message.warning('请先完成一面并推荐后再安排二面');
       return;
     }
     if (round === 'final' && (!hasRound('second') || !existing?.find((x: any) => x.round === 'second' && x.result === 'passed'))) {
-      message.warning('请先完成二面并通过后再安排终面');
+      message.warning('请先完成二面并推荐后再安排终面');
       return;
     }
 
-    // 已有该轮次则不允许重复
     if (hasRound(round)) {
       message.warning(`该候选人已完成${roundConfig[round]?.label}，不可重复安排`);
       return;
     }
 
-    // 创建面试记录（result 不设值，表示待评定）
     const { data: inserted, error } = await supabase.from('interviews').insert({
       resume_id: values.resume_id,
       round,
       interviewers: values.interviewers || [],
       scheduled_at: values.scheduled_at?.toISOString(),
       location: values.location || '',
+      interview_method: values.interview_method || 'offline',
+      meeting_link: values.meeting_link || '',
+      meeting_id: values.meeting_id || '',
       feedback: values.feedback || '',
     }).select('id').single();
 
@@ -243,11 +270,9 @@ const InterviewPage: React.FC = () => {
       return;
     }
 
-    // 更新简历状态为对应面试中
     await supabase.from('resumes').update({ status: resumeStatusMap[round] })
       .eq('id', values.resume_id);
 
-    // 发通知给面试官
     const candidateName = resumes.find((r: any) => r.id === values.resume_id)?.candidate_name || '未知';
     if (values.interviewers?.length > 0) {
       for (const uid of values.interviewers) {
@@ -255,7 +280,7 @@ const InterviewPage: React.FC = () => {
           interview_id: inserted?.id,
           user_id: uid,
           title: `新面试安排：${roundConfig[round].label}`,
-          content: `候选人【${candidateName}】的${roundConfig[round].label}已安排，请准时参加。\n时间：${values.scheduled_at?.format('YYYY-MM-DD HH:mm')}\n地点：${values.location || '待定'}`,
+          content: `候选人【${candidateName}】的${roundConfig[round].label}已安排，请准时参加。\n时间：${values.scheduled_at?.format('YYYY-MM-DD HH:mm')}\n方式：${values.interview_method === 'online' ? '线上面试（腾讯会议）' : '线下面试'}\n地点/链接：${values.interview_method === 'online' ? values.meeting_link || '待定' : values.location || '待定'}`,
         });
       }
     }
@@ -272,6 +297,11 @@ const InterviewPage: React.FC = () => {
     setResultModalVisible(true);
   };
 
+  const openDetail = (record: any) => {
+    setSelectedInterview(record);
+    setDetailModalVisible(true);
+  };
+
   const handleResultSubmit = async (values: any) => {
     if (!selectedInterview) return;
     const interview = selectedInterview;
@@ -280,81 +310,166 @@ const InterviewPage: React.FC = () => {
     const config = roundConfig[round];
     const candidateName = resumes.find((r: any) => r.id === resumeId)?.candidate_name || '未知';
 
-    // 确定审批人和审批步骤
-    let approverRole: string;
-    let stepName: string;
-    if (round === 'first') {
-      // 一面 → Tina 审批
-      approverRole = 'main_admin';
-      stepName = `一面结果审批（HR负责人）`;
-    } else if (round === 'second') {
-      // 二面 → BU负责人审批
-      approverRole = 'bu_head';
-      stepName = `二面结果审批（BU负责人）`;
-    } else {
-      // 终面 → 高管审批
-      approverRole = 'super_admin';
-      stepName = `终面结果审批（高管终审）`;
+    // PDF文件引用
+    let pdfUrl = values.pdf_url || '';
+
+    // 如果上传了文件
+    if (values.pdf_file?.fileList?.[0]?.originFileObj) {
+      const file = values.pdf_file.fileList[0].originFileObj;
+      const fileName = `interview-pdfs/${interview.id}-${round}-${Date.now()}.pdf`;
+      const { error: uploadError } = await supabase.storage
+        .from('interview-files')
+        .upload(fileName, file);
+      if (!uploadError) {
+        const { data: urlData } = supabase.storage
+          .from('interview-files')
+          .getPublicUrl(fileName);
+        pdfUrl = urlData?.publicUrl || '';
+      }
     }
 
-    // 查找审批人
-    const approver = users.find((u: any) => u.role === approverRole);
-    if (!approver) {
-      message.error(`未找到${stepName}的审批人`);
-      return;
-    }
-
-    // 先更新面试记录：保存评价但状态仍为 pending（等审批）
+    // 更新面试记录
     await supabase.from('interviews').update({
+      result: values.result,
       feedback: values.feedback || '',
-      // 暂存结果意向（审批通过后正式生效）
-      interviewer_notes: JSON.stringify({
-        proposed_result: values.result,
-        evaluation: values.feedback || '',
-        submitted_by: user?.id,
-        submitted_at: new Date().toISOString(),
-      }),
+      pdf_url: pdfUrl,
+      result_note: values.result === 'passed' ? '推荐' : '放弃',
     }).eq('id', interview.id);
 
-    // 创建审批记录
-    const { error: approvalError } = await supabase.from('approval_records').insert({
-      module: 'interview',
-      record_id: interview.id,
-      step_order: 1,
-      step_name: stepName,
-      approver_id: approver.id,
-      approver_role: approverRole,
-      status: 'pending',
-      opinion: '',
-    });
+    // 如果一面推荐，自动触发二面安排流程
+    if (round === 'first' && values.result === 'passed') {
+      message.success('一面结果：推荐。系统已记录，请安排二面');
+    }
 
-    if (approvalError) {
-      message.error('提交审批失败：' + approvalError.message);
+    // 如果二面推荐，提示填写拟录用信息
+    if (round === 'second' && values.result === 'passed') {
+      message.success('二面结果：推荐。请填写拟录用信息');
+      setResultModalVisible(false);
+      // 打开拟录用信息弹窗
+      hireInfoForm.resetFields();
+      setSelectedInterview({ ...interview, result: 'passed' });
+      setHireInfoModalVisible(true);
+      fetchData();
       return;
     }
 
-    // 通知审批人
-    await supabase.from('notifications').insert({
-      interview_id: interview.id,
-      user_id: approver.id,
-      title: `${config.label}结果待审批`,
-      content: `候选人【${candidateName}】的${config.label}结果已提交，请审批。\n提交结果：${values.result === 'passed' ? '通过' : '未通过'}\n评价：${values.feedback || '无'}`,
-    });
+    // 如果终面推荐，提示Jenny审批拟录用信息
+    if (round === 'final' && values.result === 'passed') {
+      message.success('终面结果：推荐。等待最高负责人审批拟录用信息');
+    }
 
-    message.success('面试结果已提交审批，请等待审批完成');
+    // 如果放弃，更新简历状态
+    if (values.result === 'failed') {
+      await supabase.from('resumes').update({ status: 'rejected' }).eq('id', resumeId);
+    }
+
+    message.success(`面试结果已记录：${resultLabel[values.result]}`);
     setResultModalVisible(false);
     setSelectedInterview(null);
     resultForm.resetFields();
     fetchData();
   };
 
+  // 提交拟录用信息
+  const handleHireInfoSubmit = async (values: any) => {
+    if (!selectedInterview) return;
+    const { error } = await supabase.from('interviews').update({
+      hire_info: values,
+    }).eq('id', selectedInterview.id);
+
+    if (error) {
+      message.error('保存拟录用信息失败：' + error.message);
+      return;
+    }
+
+    message.success('拟录用信息已保存，等待终面后由最高负责人审批');
+    setHireInfoModalVisible(false);
+    hireInfoForm.resetFields();
+    setSelectedInterview(null);
+    fetchData();
+  };
+
+  // Jenny 终面拟录用审批
+  const handleFinalApproval = async (values: any) => {
+    if (!selectedInterview) return;
+    const { error } = await supabase.from('interviews').update({
+      hire_info: values, // Jenny 可能修改后的信息
+      hire_info_approved: true,
+      hire_info_approved_at: new Date().toISOString(),
+      hire_info_approved_by: user?.id,
+    }).eq('id', selectedInterview.id);
+
+    if (error) {
+      message.error('审批失败：' + error.message);
+      return;
+    }
+
+    message.success('拟录用信息已审批通过，可进入入职前沟通环节');
+    setFinalApprovalModalVisible(false);
+    finalApprovalForm.resetFields();
+    setSelectedInterview(null);
+    fetchData();
+  };
+
+  // 安排入职前沟通
+  const handleCommunicationSubmit = async (values: any) => {
+    if (!selectedInterview) return;
+    const candidateName = resumes.find((r: any) => r.id === selectedInterview.resume_id)?.candidate_name || '未知';
+
+    const { error } = await supabase.from('interviews').update({
+      communication_arranged: true,
+      communication_time: values.communication_time?.toISOString(),
+      communication_participants: values.participants || [],
+      communication_notes: values.notes || '',
+    }).eq('id', selectedInterview.id);
+
+    if (error) {
+      message.error('安排沟通失败：' + error.message);
+      return;
+    }
+
+    // 通知参与人
+    if (values.participants?.length > 0) {
+      for (const uid of values.participants) {
+        await supabase.from('notifications').insert({
+          interview_id: selectedInterview.id,
+          user_id: uid,
+          title: `入职前沟通安排：${candidateName}`,
+          content: `候选人【${candidateName}】的入职前沟通已安排。\n时间：${values.communication_time?.format('YYYY-MM-DD HH:mm')}\n沟通内容：确认入职时间、薪资细节等`,
+        });
+      }
+    }
+
+    message.success('入职前沟通已安排，已通知参与人');
+    setCommunicationModalVisible(false);
+    communicationForm.resetFields();
+    setSelectedInterview(null);
+    fetchData();
+  };
+
   const columns = [
-    { title: '候选人', dataIndex: 'resume_id', width: 120, render: (id: string) => resumes.find((r: any) => r.id === id)?.candidate_name || id?.slice(0, 8) },
-    { title: '轮次', dataIndex: 'round', width: 100, render: (r: string) => <Tag color="blue">{roundConfig[r]?.label || r}</Tag> },
+    {
+      title: '候选人',
+      dataIndex: 'resume_id',
+      width: 120,
+      render: (id: string) => resumes.find((r: any) => r.id === id)?.candidate_name || id?.slice(0, 8),
+    },
+    {
+      title: '轮次',
+      dataIndex: 'round',
+      width: 140,
+      render: (r: string) => <Tag color="blue">{roundConfig[r]?.label || r}</Tag>,
+    },
+    {
+      title: '面试方式',
+      dataIndex: 'interview_method',
+      width: 100,
+      render: (m: string) => m === 'online' ? <Tag color="cyan">线上</Tag> : <Tag>线下</Tag>,
+    },
     {
       title: '面试官',
       dataIndex: 'interviewers',
-      width: 200,
+      width: 180,
       render: (ids: string[]) => {
         if (!ids || ids.length === 0) return '-';
         return ids.map((id) => {
@@ -366,53 +481,138 @@ const InterviewPage: React.FC = () => {
     {
       title: '面试时间',
       dataIndex: 'scheduled_at',
-      width: 160,
+      width: 150,
       render: (v: string) => v ? dayjs(v).format('MM-DD HH:mm') : '-',
     },
     {
-      title: '地点',
+      title: '地点/会议',
       dataIndex: 'location',
-      width: 120,
-      render: (v: string) => v || '-',
+      width: 160,
+      ellipsis: true,
+      render: (v: string, record: any) => {
+        if (record.interview_method === 'online') {
+          return record.meeting_link || record.meeting_id || '线上会议';
+        }
+        return v || '-';
+      },
     },
     {
       title: '结果',
       dataIndex: 'result',
-      width: 100,
+      width: 90,
       render: (r: string) => {
         if (!r) return <Tag color="processing">待评定</Tag>;
-        return <Tag color={statusColor[r]}>{r === 'passed' ? '通过' : r === 'failed' ? '未通过' : r === 'cancelled' ? '取消' : r}</Tag>;
+        return <Tag color={statusColor[r]}>{resultLabel[r] || r}</Tag>;
       },
     },
     {
-      title: '结果备注',
-      dataIndex: 'result_note',
-      width: 160,
-      ellipsis: true,
-      render: (v: string) => v || '-',
+      title: 'PDF附件',
+      dataIndex: 'pdf_url',
+      width: 80,
+      render: (url: string) => url ? (
+        <a href={url} target="_blank" rel="noopener noreferrer">
+          <Button size="small" type="link" icon={<FilePdfOutlined />}>查看</Button>
+        </a>
+      ) : <Text type="secondary">-</Text>,
+    },
+    {
+      title: '拟录用',
+      width: 90,
+      render: (_: any, record: any) => {
+        if (record.round === 'second' && record.result === 'passed') {
+          if (record.hire_info_approved) return <Tag color="success">已审批</Tag>;
+          if (record.hire_info) return <Tag color="processing">待审批</Tag>;
+          return <Tag color="warning">待填写</Tag>;
+        }
+        if (record.round === 'final' && record.result === 'passed') {
+          if (record.hire_info_approved) return <Tag color="success">已审批</Tag>;
+          if (record.hire_info) return <Tag color="processing">待Jenny审批</Tag>;
+          return <Tag color="warning">待二面填写</Tag>;
+        }
+        return <Text type="secondary">-</Text>;
+      },
     },
     {
       title: '操作',
-      width: 160,
+      width: 200,
+      fixed: 'right' as const,
       render: (_: any, record: any) => (
-        <Space size="small">
-          {canFillResult(record) && (
-            <Button size="small" type="primary" icon={<BellOutlined />} onClick={() => openResult(record)}>
-              {!record.result ? '填写结果' : '修改结果'}
+        <Space size="small" direction="vertical">
+          <Space size="small">
+            <Button size="small" onClick={() => openDetail(record)}>详情</Button>
+            {canFillResult(record) && (
+              <Button size="small" type="primary" icon={<BellOutlined />} onClick={() => openResult(record)}>
+                填写结果
+              </Button>
+            )}
+          </Space>
+          {canFillHireInfo(record) && (
+            <Button size="small" type="primary" onClick={() => {
+              setSelectedInterview(record);
+              hireInfoForm.resetFields();
+              setHireInfoModalVisible(true);
+            }}>
+              填写拟录用信息
             </Button>
           )}
-          {isFinalResult(record.result) && (
-            <Tag color={statusColor[record.result]}>
-              {record.result === 'passed' ? `${roundConfig[record.round]?.label}通过` : `${roundConfig[record.round]?.label}未通过`}
-            </Tag>
+          {canApproveHireInfo(record) && (
+            <Button size="small" type="primary" danger onClick={() => {
+              setSelectedInterview(record);
+              finalApprovalForm.setFieldsValue(record.hire_info || {});
+              setFinalApprovalModalVisible(true);
+            }}>
+              审批拟录用信息
+            </Button>
           )}
-          {!record.result && !canFillResult(record) && (
-            <Tag color="processing">待评定</Tag>
+          {canArrangeCommunication(record) && (
+            <Button size="small" type="primary" onClick={() => {
+              setSelectedInterview(record);
+              communicationForm.resetFields();
+              setCommunicationModalVisible(true);
+            }}>
+              安排入职前沟通
+            </Button>
           )}
         </Space>
       ),
     },
   ];
+
+  // 渲染拟录用信息表单项
+  const renderHireInfoField = (field: any) => {
+    switch (field.type) {
+      case 'textarea':
+        return <TextArea rows={2} placeholder={field.placeholder} />;
+      case 'number':
+        return <InputNumber style={{ width: '100%' }} placeholder={field.placeholder} />;
+      case 'date':
+        return <DatePicker style={{ width: '100%' }} placeholder={field.placeholder} />;
+      case 'select-multi':
+        return (
+          <Select mode="multiple" placeholder={field.placeholder}
+            options={field.options?.map((o: string) => ({ label: o, value: o }))} />
+        );
+      default:
+        return <Input placeholder={field.placeholder} />;
+    }
+  };
+
+  // 详情弹窗渲染拟录用信息
+  const renderHireInfoDetail = (hireInfo: any, approved: boolean) => {
+    if (!hireInfo) return null;
+    return (
+      <Card size="small" title="拟录用信息" style={{ marginTop: 16 }}
+        extra={approved ? <Tag color="success">已审批通过</Tag> : <Tag color="processing">待审批</Tag>}>
+        <Descriptions column={2} size="small">
+          {hireInfoFields.map((f) => (
+            <Descriptions.Item key={f.key} label={f.label}>
+              {hireInfo[f.key] ? String(hireInfo[f.key]) : '-'}
+            </Descriptions.Item>
+          ))}
+        </Descriptions>
+      </Card>
+    );
+  };
 
   return (
     <div>
@@ -420,9 +620,25 @@ const InterviewPage: React.FC = () => {
       <div className="page-header">
         <Title level={2}>面试安排</Title>
         <Text type="secondary">
-          面试流程：一面(Tina决定) → 二面(面试官决定) → 终面(面试官决定) → 待发Offer
+          面试流程：一面（人事面试）→ 二面（部门面试）→ 终面（Jenny终审）→ 入职前沟通 → Offer发放
         </Text>
       </div>
+
+      {/* 面试流程说明卡片 */}
+      <Card size="small" style={{ marginBottom: 16, background: '#f0f5ff', border: '1px solid #adc6ff' }}>
+        <Paragraph style={{ margin: 0 }}>
+          <Text strong>📋 面试流程说明</Text><br/>
+          <Text type="secondary">
+            1. <Text strong>一面（人事面试）</Text>：HR安排面试时间与方式（线下预约会议室 / 线上腾讯会议），面试完成后选择结果（推荐/放弃），上传《求职申请表》第二页第一部分扫描件。推荐→自动触发二面安排<br/>
+            2. <Text strong>二面（用人部门面试）</Text>：部门负责人面试，选择结果（推荐/放弃），上传《求职申请表》第二页第二部分扫描件。推荐→填写拟录用信息<br/>
+            3. <Text strong>终面（最高负责人面试）</Text>：Jenny及黄一萧参与，选择结果（推荐/放弃）。推荐→Jenny审批拟录用信息（可修改后确认）→进入Offer发放<br/>
+            4. <Text strong>入职前沟通</Text>：终面通过后，HR发起入职前沟通，确认入职时间、薪资细节等
+          </Text><br/>
+          <Text type="warning" style={{ fontSize: 12 }}>
+            📎 相关文件：《求职申请表》采用线下填写方式，纸质版由候选人手工填写后扫描为PDF上传。第一页为基础信息，第二页为各轮面试评价记录，第三页为建议薪资等录用信息。
+          </Text>
+        </Paragraph>
+      </Card>
 
       <Card>
         <div className="table-toolbar">
@@ -433,12 +649,12 @@ const InterviewPage: React.FC = () => {
             </Button>
           )}
           {!canArrange && (
-            <Text type="secondary">仅 Tina 可安排面试；面试官可填写面试结果</Text>
+            <Text type="secondary">仅 HR 可安排面试；面试官可填写面试结果</Text>
           )}
         </div>
 
         <Table columns={columns} dataSource={data} rowKey="id"
-          loading={loading} pagination={{ pageSize: 10 }} scroll={{ x: 1100 }} />
+          loading={loading} pagination={{ pageSize: 10 }} scroll={{ x: 1400 }} />
       </Card>
 
       {/* 安排面试弹窗 */}
@@ -461,8 +677,8 @@ const InterviewPage: React.FC = () => {
                     r.status === 'new' ? '新收→待一面' :
                     r.status === 'screening' ? '筛选中→待一面' :
                     r.status === 'interviewing_first' ? '待安排一面' :
-                    r.status === 'interviewing_second' ? '一面已通过→待二面' :
-                    r.status === 'interviewing_final' ? '二面已通过→待终面' : r.status;
+                    r.status === 'interviewing_second' ? '一面已推荐→待二面' :
+                    r.status === 'interviewing_final' ? '二面已推荐→待终面' : r.status;
                   return {
                     label: `${r.candidate_name}（${statusLabel}）`,
                     value: r.id,
@@ -475,9 +691,9 @@ const InterviewPage: React.FC = () => {
             <Select
               placeholder="选择候选人后自动确定轮次"
               options={[
-                { label: '一面（HR面试）', value: 'first' },
-                { label: '二面（BU负责人面试）', value: 'second' },
-                { label: '终面（Jenny终审）', value: 'final' },
+                { label: '一面（人事面试）', value: 'first' },
+                { label: '二面（用人部门面试）', value: 'second' },
+                { label: '终面（最高负责人面试）', value: 'final' },
               ]}
               onChange={(value) => matchInterviewers(value as InterviewRound)}
             />
@@ -499,42 +715,308 @@ const InterviewPage: React.FC = () => {
           <Form.Item name="scheduled_at" label="面试时间" rules={[{ required: true }]}>
             <DatePicker showTime style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item name="location" label="面试地点">
-            <Input placeholder="线上/线下会议室" />
+
+          <Form.Item name="interview_method" label="面试方式" rules={[{ required: true }]}>
+            <Radio.Group>
+              <Radio.Button value="offline">线下面试</Radio.Button>
+              <Radio.Button value="online">线上面试</Radio.Button>
+            </Radio.Group>
           </Form.Item>
+
+          <Form.Item
+            noStyle
+            shouldUpdate={(prev, cur) => prev.interview_method !== cur.interview_method}
+          >
+            {({ getFieldValue }) => {
+              const method = getFieldValue('interview_method');
+              if (method === 'online') {
+                return (
+                  <>
+                    <Form.Item name="meeting_link" label="腾讯会议链接" rules={[{ required: true, message: '请填写腾讯会议链接' }]}>
+                      <Input placeholder="https://meeting.tencent.com/..." />
+                    </Form.Item>
+                    <Form.Item name="meeting_id" label="会议号" rules={[{ required: true, message: '请填写会议号' }]}>
+                      <Input placeholder="例如：123-456-789" />
+                    </Form.Item>
+                  </>
+                );
+              }
+              return (
+                <Form.Item name="location" label="线下地点（会议室）" rules={[{ required: true, message: '请填写面试地点' }]}>
+                  <Input placeholder="预约的会议室名称" />
+                </Form.Item>
+              );
+            }}
+          </Form.Item>
+
           <Form.Item name="feedback" label="备注">
             <TextArea rows={3} placeholder="面试注意事项" />
           </Form.Item>
         </Form>
       </Modal>
 
-      {/* 填写面试结果弹窗 — 提交审批 */}
-      <Modal title={`提交面试结果 —— ${selectedInterview ? roundConfig[selectedInterview.round]?.label : ''}`}
+      {/* 填写面试结果弹窗 */}
+      <Modal title={`填写面试结果 —— ${selectedInterview ? roundConfig[selectedInterview.round]?.label : ''}`}
         open={resultModalVisible}
         onCancel={() => { setResultModalVisible(false); setSelectedInterview(null); }}
-        onOk={() => resultForm.submit()} width={600}>
+        onOk={() => resultForm.submit()} width={650}>
         <Form form={resultForm} layout="vertical" onFinish={handleResultSubmit}>
+          {selectedInterview && (
+            <Card size="small" style={{ marginBottom: 16, background: '#f6ffed', border: '1px solid #b7eb8f' }}>
+              <Space>
+                <Text strong>候选人：</Text>
+                <Text>{resumes.find((r: any) => r.id === selectedInterview.resume_id)?.candidate_name || '未知'}</Text>
+                <Divider type="vertical" />
+                <Text strong>轮次：</Text>
+                <Text>{roundConfig[selectedInterview.round]?.label}</Text>
+                <Divider type="vertical" />
+                <Text strong>时间：</Text>
+                <Text>{selectedInterview.scheduled_at ? dayjs(selectedInterview.scheduled_at).format('YYYY-MM-DD HH:mm') : '-'}</Text>
+              </Space>
+            </Card>
+          )}
+
           <Form.Item name="result" label="面试结果" rules={[{ required: true, message: '请选择面试结果' }]}>
-            <Select options={[
-              { label: '✅ 通过', value: 'passed' },
-              { label: '❌ 未通过', value: 'failed' },
-              { label: '⚠️ 取消', value: 'cancelled' },
-            ]} />
+            <Radio.Group>
+              <Radio.Button value="passed"><CheckCircleOutlined /> 推荐</Radio.Button>
+              <Radio.Button value="failed"><CloseCircleOutlined /> 放弃</Radio.Button>
+            </Radio.Group>
           </Form.Item>
+
           <Form.Item name="feedback" label="面试评价" rules={[{ required: true, message: '请填写面试评价' }]}>
             <TextArea rows={4} placeholder="请详细填写面试评价，包括：候选人表现、技能匹配度、沟通能力、建议等" />
           </Form.Item>
+
+          {/* PDF上传入口 */}
+          {selectedInterview && roundConfig[selectedInterview.round]?.pdfLabel && (
+            <Form.Item
+              name="pdf_file"
+              label={
+                <span>
+                  <FilePdfOutlined /> 上传{roundConfig[selectedInterview.round].pdfLabel}
+                </span>
+              }
+              tooltip="PDF扫描件，上传后存档"
+            >
+              <Upload
+                accept=".pdf"
+                maxCount={1}
+                beforeUpload={() => false}
+              >
+                <Button icon={<UploadOutlined />}>选择PDF文件上传</Button>
+              </Upload>
+            </Form.Item>
+          )}
+
           {selectedInterview && (
             <Card size="small" style={{ background: '#fffbe6', border: '1px solid #ffe58f', marginBottom: 16 }}>
               <Text type="warning">
-                提交后将进入审批流程：
-                {selectedInterview.round === 'first' ? 'Tina（HR负责人）审批' :
-                 selectedInterview.round === 'second' ? 'BU负责人审批' : '高管终审'}
-                ，审批通过后结果正式生效。
+                {selectedInterview.round === 'first' && '提示：选择「推荐」后，系统将自动触发二面安排流程'}
+                {selectedInterview.round === 'second' && '提示：选择「推荐」后，需填写拟录用信息（表3-1）'}
+                {selectedInterview.round === 'final' && '提示：选择「推荐」后，最高负责人需对拟录用信息进行审批确认'}
               </Text>
             </Card>
           )}
         </Form>
+      </Modal>
+
+      {/* 拟录用信息弹窗 */}
+      <Modal title="拟录用信息（表3-1）" open={hireInfoModalVisible}
+        onCancel={() => { setHireInfoModalVisible(false); hireInfoForm.resetFields(); setSelectedInterview(null); }}
+        onOk={() => hireInfoForm.submit()} width={800}>
+        <Form form={hireInfoForm} layout="vertical" onFinish={handleHireInfoSubmit}>
+          <Descriptions column={1} size="small" style={{ marginBottom: 16 }}>
+            <Descriptions.Item label="候选人">
+              {selectedInterview ? resumes.find((r: any) => r.id === selectedInterview.resume_id)?.candidate_name : '-'}
+            </Descriptions.Item>
+          </Descriptions>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+            {hireInfoFields.map((field) => (
+              <Form.Item key={field.key} name={field.key} label={field.label}
+                rules={field.key === 'hire_position' || field.key === 'start_work_date' ? [{ required: true }] : []}>
+                {renderHireInfoField(field)}
+              </Form.Item>
+            ))}
+          </div>
+          <Card size="small" style={{ background: '#e6f4ff', border: '1px solid #91caff', marginTop: 8 }}>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              填写说明：录用公司可不填（待最高负责人确认）；福利项目为多选（社会保险、商业保险、其他）；其他字段请如实填写。终面通过后由最高负责人审批，可修改后确认。
+            </Text>
+          </Card>
+        </Form>
+      </Modal>
+
+      {/* 终面拟录用审批弹窗 */}
+      <Modal title="终面拟录用信息审批" open={finalApprovalModalVisible}
+        onCancel={() => { setFinalApprovalModalVisible(false); finalApprovalForm.resetFields(); setSelectedInterview(null); }}
+        onOk={() => finalApprovalForm.submit()} width={800}
+        okText="审批通过" okButtonProps={{ type: 'primary' }}>
+        <Card size="small" style={{ marginBottom: 16, background: '#f6ffed', border: '1px solid #b7eb8f' }}>
+          <Text>
+            <CheckCircleOutlined style={{ color: '#52c41a' }} />
+            {' '}终面结果：推荐。请审核部门负责人填写的拟录用信息，可修改后确认。审批通过后进入Offer发放环节。
+          </Text>
+        </Card>
+        <Form form={finalApprovalForm} layout="vertical" onFinish={handleFinalApproval}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+            {hireInfoFields.map((field) => (
+              <Form.Item key={field.key} name={field.key} label={field.label}>
+                {renderHireInfoField(field)}
+              </Form.Item>
+            ))}
+          </div>
+        </Form>
+      </Modal>
+
+      {/* 入职前沟通弹窗 */}
+      <Modal title="安排入职前沟通" open={communicationModalVisible}
+        onCancel={() => { setCommunicationModalVisible(false); communicationForm.resetFields(); setSelectedInterview(null); }}
+        onOk={() => communicationForm.submit()} width={600}>
+        <Form form={communicationForm} layout="vertical" onFinish={handleCommunicationSubmit}>
+          <Card size="small" style={{ marginBottom: 16, background: '#f0f5ff', border: '1px solid #adc6ff' }}>
+            <Text>
+              终面已通过，拟录用信息已审批。请安排入职前沟通，通知参与人（HR和用人部门负责人）。
+              <br/>沟通内容：确认入职时间、薪资细节等。
+            </Text>
+          </Card>
+          <Form.Item name="communication_time" label="沟通时间" rules={[{ required: true, message: '请选择沟通时间' }]}>
+            <DatePicker showTime style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item name="participants" label="参与人" rules={[{ required: true, message: '请选择参与人' }]}>
+            <Select mode="multiple" placeholder="选择参与人（HR和用人部门负责人）"
+              options={users.map((u: any) => ({
+                label: `${u.display_name}（${u.department || u.role}）`,
+                value: u.id,
+              }))}
+            />
+          </Form.Item>
+          <Form.Item name="notes" label="沟通备注">
+            <TextArea rows={3} placeholder="确认入职时间、薪资细节等" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 详情弹窗 */}
+      <Modal title="面试详情" open={detailModalVisible}
+        onCancel={() => { setDetailModalVisible(false); setSelectedInterview(null); }}
+        footer={null} width={800}>
+        {selectedInterview && (
+          <div>
+            <Card size="small" title="面试基本信息" style={{ marginBottom: 16 }}>
+              <Descriptions column={2} size="small">
+                <Descriptions.Item label="候选人">
+                  {resumes.find((r: any) => r.id === selectedInterview.resume_id)?.candidate_name || '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label="轮次">
+                  {roundConfig[selectedInterview.round]?.label || selectedInterview.round}
+                </Descriptions.Item>
+                <Descriptions.Item label="面试方式">
+                  {selectedInterview.interview_method === 'online' ? '线上（腾讯会议）' : '线下面试'}
+                </Descriptions.Item>
+                <Descriptions.Item label="面试时间">
+                  {selectedInterview.scheduled_at ? dayjs(selectedInterview.scheduled_at).format('YYYY-MM-DD HH:mm') : '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label="面试官">
+                  {(selectedInterview.interviewers || []).map((id: string) =>
+                    users.find((u: any) => u.id === id)?.display_name || id.slice(0, 8)
+                  ).join('、')}
+                </Descriptions.Item>
+                <Descriptions.Item label="地点/会议链接">
+                  {selectedInterview.interview_method === 'online'
+                    ? selectedInterview.meeting_link || selectedInterview.meeting_id || '-'
+                    : selectedInterview.location || '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label="面试结果">
+                  {selectedInterview.result
+                    ? <Tag color={statusColor[selectedInterview.result]}>{resultLabel[selectedInterview.result]}</Tag>
+                    : <Tag color="processing">待评定</Tag>}
+                </Descriptions.Item>
+                <Descriptions.Item label="PDF附件">
+                  {selectedInterview.pdf_url
+                    ? <a href={selectedInterview.pdf_url} target="_blank" rel="noopener noreferrer">
+                        <Button size="small" type="link" icon={<FilePdfOutlined />}>查看PDF</Button>
+                      </a>
+                    : '-'}
+                </Descriptions.Item>
+              </Descriptions>
+            </Card>
+
+            {selectedInterview.feedback && (
+              <Card size="small" title="面试评价" style={{ marginBottom: 16 }}>
+                <Paragraph>{selectedInterview.feedback}</Paragraph>
+              </Card>
+            )}
+
+            {/* 面试流程进度 */}
+            {selectedInterview.result && (
+              <Card size="small" title="面试流程进度" style={{ marginBottom: 16 }}>
+                <Steps
+                  direction="vertical"
+                  size="small"
+                  current={
+                    selectedInterview.round === 'first' ? 0 :
+                    selectedInterview.round === 'second' ? 1 : 2
+                  }
+                  status={selectedInterview.result === 'passed' ? 'finish' : 'error'}
+                  items={[
+                    {
+                      title: '一面（人事面试）',
+                      description: 'HR面试，上传《求职申请表》第二页第一部分',
+                      status: selectedInterview.round === 'first'
+                        ? (selectedInterview.result === 'passed' ? 'finish' : 'error')
+                        : 'finish',
+                    },
+                    {
+                      title: '二面（用人部门面试）',
+                      description: '部门负责人面试，上传《求职申请表》第二页第二部分，推荐后填写拟录用信息',
+                      status: selectedInterview.round === 'second'
+                        ? (selectedInterview.result === 'passed' ? 'finish' : 'error')
+                        : ['final'].includes(selectedInterview.round) ? 'finish' : 'wait',
+                    },
+                    {
+                      title: '终面（最高负责人面试）',
+                      description: 'Jenny及黄一萧参与，推荐后审批拟录用信息',
+                      status: selectedInterview.round === 'final'
+                        ? (selectedInterview.result === 'passed' ? 'finish' : 'error')
+                        : 'wait',
+                    },
+                    {
+                      title: '入职前沟通',
+                      description: '确认入职时间、薪资细节等',
+                      status: selectedInterview.communication_arranged ? 'finish' : 'wait',
+                    },
+                  ]}
+                />
+              </Card>
+            )}
+
+            {/* 拟录用信息 */}
+            {renderHireInfoDetail(selectedInterview.hire_info, selectedInterview.hire_info_approved)}
+
+            {/* 入职前沟通信息 */}
+            {selectedInterview.communication_arranged && (
+              <Card size="small" title="入职前沟通" style={{ marginTop: 16 }}>
+                <Descriptions column={1} size="small">
+                  <Descriptions.Item label="沟通时间">
+                    {selectedInterview.communication_time
+                      ? dayjs(selectedInterview.communication_time).format('YYYY-MM-DD HH:mm')
+                      : '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="参与人">
+                    {(selectedInterview.communication_participants || []).map((id: string) =>
+                      users.find((u: any) => u.id === id)?.display_name || id.slice(0, 8)
+                    ).join('、')}
+                  </Descriptions.Item>
+                  {selectedInterview.communication_notes && (
+                    <Descriptions.Item label="备注">
+                      {selectedInterview.communication_notes}
+                    </Descriptions.Item>
+                  )}
+                </Descriptions>
+              </Card>
+            )}
+          </div>
+        )}
       </Modal>
     </div>
   );
