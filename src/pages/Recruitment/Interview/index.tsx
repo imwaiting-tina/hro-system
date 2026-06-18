@@ -342,6 +342,7 @@ const InterviewPage: React.FC = () => {
 
     // 如果二面推荐，提示填写拟录用信息
     if (round === 'second' && values.result === 'passed') {
+      await supabase.from('resumes').update({ status: 'interviewing_final' }).eq('id', resumeId);
       message.success('二面结果：推荐。请填写拟录用信息');
       setResultModalVisible(false);
       // 打开拟录用信息弹窗
