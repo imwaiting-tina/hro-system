@@ -114,9 +114,7 @@ const InterviewPage: React.FC = () => {
     setLoading(true);
     const [{ data: interviews }, { data: resumeList }, { data: userList }] = await Promise.all([
       supabase.from('interviews').select('*').order('scheduled_at', { ascending: true }),
-      supabase.from('resumes').select('id,candidate_name,status').in('status', [
-        'new', 'screening', 'interviewing_first', 'interviewing_second', 'interviewing_final',
-      ]),
+      supabase.from('resumes').select('id,candidate_name,status').not('status', 'in', '("rejected","withdrawn","offered","accepted","pending_offer")'),
       supabase.from('users').select('id,username,display_name,role,department'),
     ]);
     if (resumeList) setResumes(resumeList);
@@ -689,18 +687,20 @@ const InterviewPage: React.FC = () => {
                 (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
               }
               options={resumes
-                .filter((r: any) => ['new', 'screening', 'interviewing_first', 'interviewing_second', 'interviewing_final'].includes(r.status))
-                .map((r: any) => {
+                .flatMap((r: any) => {
+                  // 基于实际面试记录计算可安排轮次
+                  const rInterviews = data.filter((iv: any) => iv.resume_id === r.id);
+                  const available = getAvailableRounds(r.status, rInterviews);
+                  if (available.length === 0) return [];
+                  const nextRound = available[0];
                   const statusLabel =
-                    r.status === 'new' ? '新收→待一面' :
-                    r.status === 'screening' ? '筛选中→待一面' :
-                    r.status === 'interviewing_first' ? '待安排一面' :
-                    r.status === 'interviewing_second' ? '一面已推荐→待二面' :
-                    r.status === 'interviewing_final' ? '二面已推荐→待终面' : r.status;
-                  return {
+                    nextRound === 'first' ? '待安排一面' :
+                    nextRound === 'second' ? '一面已推荐→待二面' :
+                    nextRound === 'final' ? '二面已推荐→待终面' : r.status;
+                  return [{
                     label: `${r.candidate_name}（${statusLabel}）`,
                     value: r.id,
-                  };
+                  }];
                 })}
             />
           </Form.Item>
