@@ -37,10 +37,14 @@ const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
 
 // ============================================================
-// 菜单配置 - 六大模块 + 审批管理
+// 菜单配置 - 对齐产品说明书V3.0四大板块 + 审批管理
+// 板块一：员工全生命周期管理（招聘→入职→在职→日常→离职）
+// 板块二：员工合同管理（员工档案/试用期评估/续签管理）
+// 板块三：Payroll（月度/考勤/假期/社保/商保/工资单）
+// 板块四：员工服务（办公配置/员工福利/生活服务/服务大厅）
 // ============================================================
 const menuConfig = [
-  // 一、工作台
+  // 工作台
   {
     key: '/workplace',
     icon: <HomeOutlined />,
@@ -48,70 +52,113 @@ const menuConfig = [
     roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head', 'employee'] as UserRole[],
   },
 
-  // 二、员工管理
+  // ============================================================
+  // 板块一：员工全生命周期管理
+  // ============================================================
   {
     key: 'hr-core',
     icon: <TeamOutlined />,
-    label: '员工管理',
+    label: '员工全生命周期',
     roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head'] as UserRole[],
     children: [
-      { key: '/recruitment/resume', icon: <FileSearchOutlined />, label: '招聘管理' },
-      { key: '/onboarding/docs', icon: <UserAddOutlined />, label: '入职管理' },
-      { key: '/employment/transfer', icon: <SwapOutlined />, label: '员工流动' },
-      { key: '/daily', icon: <ScheduleOutlined />, label: '日常管理' },
-      { key: '/offboarding/list', icon: <LogoutOutlined />, label: '离职管理' },
+      // 1.1 招聘管理（需求→简历→面试→Offer）
+      {
+        key: 'recruitment-group',
+        type: 'group' as const,
+        label: '招聘管理',
+        children: [
+          { key: '/recruitment/demand', icon: <FileSearchOutlined />, label: '招聘需求' },
+          { key: '/recruitment/resume', icon: <FileTextOutlined />, label: '简历库' },
+          { key: '/recruitment/interview', icon: <AuditOutlined />, label: '面试安排' },
+          { key: '/recruitment/offer', icon: <SendOutlined />, label: 'Offer发放' },
+        ],
+      },
+      // 1.2 入职管理
+      {
+        key: 'onboarding-group',
+        type: 'group' as const,
+        label: '入职管理',
+        children: [
+          { key: '/onboarding/docs', icon: <UserAddOutlined />, label: '入职文件清单' },
+          { key: '/onboarding/guide', icon: <SolutionOutlined />, label: '入职指引' },
+          { key: '/onboarding/admin', icon: <SettingOutlined />, label: '行政准备' },
+          { key: '/onboarding/training', icon: <SafetyOutlined />, label: '新员工培训' },
+          { key: '/onboarding/info', icon: <IdcardOutlined />, label: '信息登记表' },
+        ],
+      },
+      // 1.3 在职管理（调动/晋升）
+      {
+        key: 'employment-group',
+        type: 'group' as const,
+        label: '在职管理',
+        children: [
+          { key: '/employment/transfer', icon: <SwapOutlined />, label: '调动/晋升' },
+          { key: '/daily', icon: <ScheduleOutlined />, label: '日常管理' },
+        ],
+      },
+      // 1.4 辞退/离职管理
+      {
+        key: 'offboarding-group',
+        type: 'group' as const,
+        label: '离职管理',
+        children: [
+          { key: '/resignation', icon: <LogoutOutlined />, label: '辞退管理' },
+          { key: '/offboarding/list', icon: <LogoutOutlined />, label: '离职办理' },
+        ],
+      },
     ],
   },
 
-  // 三、员工合同管理
+  // ============================================================
+  // 板块二：员工合同管理
+  // ============================================================
   {
     key: 'contract',
     icon: <ContainerOutlined />,
     label: '员工合同管理',
     roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head'] as UserRole[],
     children: [
-      { key: '/employment/employees', icon: <TeamOutlined />, label: '员工档案' },
-      { key: '/employment/evaluation', icon: <AuditOutlined />, label: '试用期/实习评估' },
-      { key: '/employment/renewal', icon: <FileDoneOutlined />, label: '续签管理' },
+      { key: '/contract?tab=archive', icon: <TeamOutlined />, label: '员工档案' },
+      { key: '/contract?tab=evaluation', icon: <AuditOutlined />, label: '试用期评估' },
+      { key: '/contract?tab=renewal', icon: <FileDoneOutlined />, label: '续签管理' },
     ],
   },
 
-  // 四、Payroll（薪酬管理）
+  // ============================================================
+  // 板块三：Payroll 薪酬管理
+  // ============================================================
   {
     key: 'payroll',
     icon: <DollarOutlined />,
     label: 'Payroll',
     roles: ['super_admin', 'main_admin', 'sub_admin'] as UserRole[],
     children: [
-      { key: '/payroll/monthly', icon: <CalendarOutlined />, label: '月度Payroll' },
-      { key: '/payroll/attendance', icon: <ScheduleOutlined />, label: '考勤记录' },
-      { key: '/payroll/leave', icon: <FileTextOutlined />, label: '请假管理' },
-      { key: '/payroll/social-insurance', icon: <BankOutlined />, label: '社保/公积金' },
-      { key: '/daily/insurance', icon: <SafetyOutlined />, label: '商业保险' },
-      { key: '/payroll/payslip', icon: <FileDoneOutlined />, label: '工资单' },
+      { key: '/payroll?tab=monthly', icon: <CalendarOutlined />, label: '月度Payroll' },
+      { key: '/payroll?tab=attendance', icon: <ScheduleOutlined />, label: '考勤记录' },
+      { key: '/payroll?tab=leave', icon: <FileTextOutlined />, label: '假期管理' },
+      { key: '/payroll?tab=social', icon: <BankOutlined />, label: '社保/公积金' },
+      { key: '/payroll?tab=commercial', icon: <SafetyOutlined />, label: '商业保险' },
+      { key: '/payroll?tab=payslip', icon: <FileDoneOutlined />, label: '工资单' },
     ],
   },
 
-  // 五、员工服务（含大后台行政服务）
+  // ============================================================
+  // 板块四：员工服务
+  // ============================================================
   {
     key: 'employee-service',
     icon: <CustomerServiceOutlined />,
     label: '员工服务',
     roles: ['super_admin', 'main_admin', 'sub_admin', 'bu_head', 'employee'] as UserRole[],
     children: [
-      { key: '/employee-service/assets', icon: <SolutionOutlined />, label: '座位/工牌/电脑' },
-      { key: '/employee-service/accounts', icon: <UserOutlined />, label: '系统账户' },
-      { key: '/employee-service/benefits-policy', icon: <GiftOutlined />, label: '福利政策' },
-      { key: '/employee-service/benefits-issue', icon: <GiftOutlined />, label: '福利发放' },
-      { key: '/employee-service/benefits-exec', icon: <GiftOutlined />, label: '福利执行' },
-      { key: '/employee-service/benefits-mgmt', icon: <GiftOutlined />, label: '福利管理' },
-      { key: '/employee-service/sport-card', icon: <TeamOutlined />, label: 'HRO运动卡' },
-      { key: '/employee-service/apartment', icon: <HomeOutlined />, label: '人才公寓' },
-      { key: '/employee-service/query', icon: <FileSearchOutlined />, label: '员工查询' },
+      { key: '/employee-service?tab=office', icon: <SettingOutlined />, label: '办公配置' },
+      { key: '/employee-service?tab=benefits', icon: <GiftOutlined />, label: '员工福利' },
+      { key: '/employee-service?tab=life', icon: <HomeOutlined />, label: '生活服务' },
+      { key: '/employee-service?tab=hall', icon: <CustomerServiceOutlined />, label: '服务大厅' },
     ],
   },
 
-  // 六、审批管理
+  // 审批管理
   {
     key: '/approval',
     icon: <AuditOutlined />,
@@ -160,7 +207,7 @@ const MainLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuthStore();
-  const [openKeys, setOpenKeys] = React.useState<string[]>(['hr-core', 'contract', 'payroll', 'employee-service']);
+  const [openKeys, setOpenKeys] = React.useState<string[]>(['hr-core']);
   const [collapsed, setCollapsed] = React.useState(false);
 
   // 根据当前路径自动展开对应的父菜单
@@ -175,7 +222,8 @@ const MainLayout: React.FC = () => {
         onboarding: 'hr-core',
         offboarding: 'hr-core',
         daily: 'hr-core',
-        employment: 'contract',
+        resignation: 'hr-core',
+        employment: 'hr-core',
         contract: 'contract',
         payroll: 'payroll',
         'employee-service': 'employee-service',
@@ -190,12 +238,32 @@ const MainLayout: React.FC = () => {
     }
   }, [location.pathname]);
 
+  // 计算当前选中的菜单key（支持 query 参数匹配）
+  const currentPath = location.pathname;
+  const currentSearch = location.search;
+  const currentFullKey = currentPath + currentSearch;
+  
+  // 对于 contract/payroll/employee-service 页面，如果没有 search，尝试从 state 获取
+  const tabFromState = (location.state as any)?.tab;
+  const effectiveSelectedKey = tabFromState 
+    ? `${currentPath}?tab=${tabFromState}` 
+    : currentFullKey;
+
   if (!user) return null;
 
   const filteredMenu = filterMenuByRole(menuConfig, user.role);
 
   const handleMenuClick = ({ key }: { key: string }) => {
-    navigate(key);
+    // 支持 query 参数形式的路由（如 /contract?tab=profile）
+    if (key.includes('?')) {
+      const [path, query] = key.split('?');
+      const params = new URLSearchParams(query);
+      const search = {};
+      params.forEach((v, k) => { (search as any)[k] = v; });
+      navigate(path, { state: search });
+    } else {
+      navigate(key);
+    }
   };
 
   const handleLogout = async () => {
@@ -279,7 +347,7 @@ const MainLayout: React.FC = () => {
           <Menu
             mode="inline"
             theme="dark"
-            selectedKeys={[location.pathname]}
+            selectedKeys={[effectiveSelectedKey]}
             openKeys={collapsed ? [] : openKeys}
             onOpenChange={setOpenKeys}
             items={filteredMenu}

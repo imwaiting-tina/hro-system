@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card, Table, Button, Tag, Space, Typography, Row, Col, Statistic, Tabs,
   Modal, Form, Input, Select, DatePicker, Upload, message, Tooltip,
@@ -13,7 +13,7 @@ import {
   FileTextOutlined, CalendarOutlined, RightOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '../../stores/authStore';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -62,9 +62,18 @@ const suggestionFeatures = [
 const EmployeeServicePage: React.FC = () => {
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('office');
   const [suggestionModal, setSuggestionModal] = useState(false);
   const [form] = Form.useForm();
+
+  // 从菜单导航 state 中读取目标 tab
+  useEffect(() => {
+    const tab = (location.state as any)?.tab;
+    if (tab && ['office', 'benefits', 'life', 'hall'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [location.state]);
 
   return (
     <div style={{ padding: 24 }}>

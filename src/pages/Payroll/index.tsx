@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card, Table, Button, Tag, Space, Typography, Row, Col, Statistic, Tabs,
   Modal, Form, Input, Select, DatePicker, InputNumber, message, Tooltip,
@@ -12,7 +12,7 @@ import {
   SendOutlined, EyeOutlined, EditOutlined,
 } from '@ant-design/icons';
 import { useAuthStore, canEdit } from '../../stores/authStore';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import dayjs from 'dayjs';
 
 const { Title, Text, Paragraph } = Typography;
@@ -122,7 +122,16 @@ const categoryColors: Record<string, string> = {
 const PayrollPage: React.FC = () => {
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('monthly');
+
+  // 从菜单导航 state 中读取目标 tab
+  useEffect(() => {
+    const tab = (location.state as any)?.tab;
+    if (tab && ['monthly', 'attendance', 'leave', 'social', 'commercial', 'payslip'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [location.state]);
 
   return (
     <div style={{ padding: 24 }}>

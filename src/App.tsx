@@ -133,29 +133,29 @@ const App: React.FC = () => {
                 <Route path=":id/settlement" element={<OffboardingSettlementPage />} />
               </Route>
 
-              {/* 员工合同管理（新模块） */}
+              {/* 员工合同管理（板块二 - Tab页） */}
               <Route path="contract" element={<ContractPage />} />
-              <Route path="contract/list" element={<ContractPage />} />
+              <Route path="contract/list" element={<Navigate to="/contract?tab=archive" replace />} />
 
-              {/* Payroll 薪酬管理（新模块） */}
+              {/* Payroll 薪酬管理（板块三 - Tab页） */}
               <Route path="payroll" element={<PayrollPage />} />
-              <Route path="payroll/monthly" element={<PayrollPage />} />
-              <Route path="payroll/attendance" element={<PayrollPage />} />
-              <Route path="payroll/leave" element={<PayrollPage />} />
-              <Route path="payroll/social-insurance" element={<PayrollPage />} />
-              <Route path="payroll/payslip" element={<PayrollPage />} />
+              <Route path="payroll/monthly" element={<Navigate to="/payroll?tab=monthly" replace />} />
+              <Route path="payroll/attendance" element={<Navigate to="/payroll?tab=attendance" replace />} />
+              <Route path="payroll/leave" element={<Navigate to="/payroll?tab=leave" replace />} />
+              <Route path="payroll/social-insurance" element={<Navigate to="/payroll?tab=social" replace />} />
+              <Route path="payroll/payslip" element={<Navigate to="/payroll?tab=payslip" replace />} />
 
-              {/* 员工服务（新模块） */}
+              {/* 员工服务（板块四 - Tab页） */}
               <Route path="employee-service" element={<EmployeeServicePage />} />
-              <Route path="employee-service/assets" element={<EmployeeServicePage />} />
-              <Route path="employee-service/accounts" element={<EmployeeServicePage />} />
-              <Route path="employee-service/benefits-policy" element={<EmployeeServicePage />} />
-              <Route path="employee-service/benefits-issue" element={<EmployeeServicePage />} />
-              <Route path="employee-service/benefits-exec" element={<EmployeeServicePage />} />
-              <Route path="employee-service/benefits-mgmt" element={<EmployeeServicePage />} />
-              <Route path="employee-service/sport-card" element={<EmployeeServicePage />} />
-              <Route path="employee-service/apartment" element={<EmployeeServicePage />} />
-              <Route path="employee-service/query" element={<EmployeeServicePage />} />
+              <Route path="employee-service/assets" element={<Navigate to="/employee-service?tab=office" replace />} />
+              <Route path="employee-service/accounts" element={<Navigate to="/employee-service?tab=office" replace />} />
+              <Route path="employee-service/benefits-policy" element={<Navigate to="/employee-service?tab=benefits" replace />} />
+              <Route path="employee-service/benefits-issue" element={<Navigate to="/employee-service?tab=benefits" replace />} />
+              <Route path="employee-service/benefits-exec" element={<Navigate to="/employee-service?tab=benefits" replace />} />
+              <Route path="employee-service/benefits-mgmt" element={<Navigate to="/employee-service?tab=benefits" replace />} />
+              <Route path="employee-service/sport-card" element={<Navigate to="/employee-service?tab=life" replace />} />
+              <Route path="employee-service/apartment" element={<Navigate to="/employee-service?tab=life" replace />} />
+              <Route path="employee-service/query" element={<Navigate to="/employee-service?tab=hall" replace />} />
 
               {/* 审批管理 */}
               <Route path="approval" element={<ApprovalPage />} />

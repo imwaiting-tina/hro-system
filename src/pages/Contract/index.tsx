@@ -11,7 +11,7 @@ import {
   SafetyOutlined, FileSearchOutlined, ExclamationCircleOutlined,
 } from '@ant-design/icons';
 import { useAuthStore, canEdit } from '../../stores/authStore';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import supabase from '../../utils/supabase';
 import dayjs from 'dayjs';
 
@@ -83,11 +83,20 @@ const contractStatuses = [
 const ContractPage: React.FC = () => {
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('archive');
   const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [renewalModalVisible, setRenewalModalVisible] = useState(false);
   const [form] = Form.useForm();
+
+  // 从菜单导航 state 中读取目标 tab
+  useEffect(() => {
+    const tab = (location.state as any)?.tab;
+    if (tab && ['archive', 'evaluation', 'renewal'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [location.state]);
 
   const fetchData = async () => {
     setLoading(true);
