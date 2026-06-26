@@ -86,14 +86,13 @@ const menuConfig = [
           { key: '/onboarding/info', icon: <IdcardOutlined />, label: '信息登记表' },
         ],
       },
-      // 1.3 在职管理（调动/晋升）
+      // 1.3 员工流动（调动/晋升）
       {
         key: 'employment-group',
         type: 'group' as const,
-        label: '在职管理',
+        label: '员工流动',
         children: [
-          { key: '/employment/transfer', icon: <SwapOutlined />, label: '调动/晋升' },
-          { key: '/daily', icon: <ScheduleOutlined />, label: '日常管理' },
+          { key: '/employment/transfer', icon: <SwapOutlined />, label: '员工流动' },
         ],
       },
       // 1.4 辞退/离职管理
