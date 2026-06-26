@@ -3,6 +3,7 @@ import { Space, Card, Typography } from 'antd';
 import {
   LogoutOutlined,
   SendOutlined,
+  FileDoneOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -11,6 +12,7 @@ const { Text } = Typography;
 const navItems = [
   { key: '/offboarding/list', label: '离职列表', icon: <LogoutOutlined /> },
   { key: '/offboarding/new', label: '发起离职', icon: <SendOutlined /> },
+  { key: '/offboarding/handover-checklist', label: '离职交接', icon: <FileDoneOutlined /> },
 ];
 
 const OffboardingNav: React.FC = () => {

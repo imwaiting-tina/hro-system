@@ -103,6 +103,7 @@ const menuConfig = [
         children: [
           { key: '/resignation', icon: <LogoutOutlined />, label: '辞退管理' },
           { key: '/offboarding/list', icon: <LogoutOutlined />, label: '离职办理' },
+          { key: '/offboarding/handover-checklist', icon: <FileDoneOutlined />, label: '离职交接' },
         ],
       },
     ],

@@ -33,6 +33,7 @@ import OffboardingListPage from './pages/Offboarding/OffboardingList';
 import OffboardingNewPage from './pages/Offboarding/OffboardingNew';
 import OffboardingHandoverPage from './pages/Offboarding/OffboardingHandover';
 import OffboardingSettlementPage from './pages/Offboarding/OffboardingSettlement';
+import OffboardingHandoverChecklistPage from './pages/Offboarding/OffboardingHandoverChecklist';
 
 // 新模块
 import ContractPage from './pages/Contract';
@@ -129,6 +130,7 @@ const App: React.FC = () => {
                 <Route index element={<Navigate to="/offboarding/list" replace />} />
                 <Route path="list" element={<OffboardingListPage />} />
                 <Route path="new" element={<OffboardingNewPage />} />
+                <Route path="handover-checklist" element={<OffboardingHandoverChecklistPage />} />
                 <Route path=":id/handover" element={<OffboardingHandoverPage />} />
                 <Route path=":id/settlement" element={<OffboardingSettlementPage />} />
               </Route>
