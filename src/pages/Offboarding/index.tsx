@@ -39,27 +39,29 @@ const OffboardingPage: React.FC = () => {
 
   const refreshCases = () => setCaseRefreshKey((k) => k + 1);
 
-  // 加载员工列表
+  // 加载员工列表（合并 Supabase + mock，避免数据不完整）
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('employees')
           .select('id, chinese_name, employee_no, position_name, employee_type')
           .order('chinese_name');
-        if (!error && data) {
-          setEmployees(data.map((e: any) => ({ ...e, name: e.chinese_name, department: '' })));
-          // 默认选中第一个
-          if (!selectedEmployeeId && data.length > 0) {
-            setSelectedEmployeeId(data[0].id);
-          }
+        if (data && data.length > 0) {
+          const supIds = new Set(data.map((e: any) => e.id));
+          const merged = [...data.map((e: any) => ({ ...e, name: e.chinese_name, department: '' }))];
+          mockEmployees.forEach((e) => {
+            if (!supIds.has(e.id)) merged.push({ ...e, name: e.chinese_name, department: e.department || '' });
+          });
+          setEmployees(merged);
+          if (!selectedEmployeeId && merged.length > 0) setSelectedEmployeeId(merged[0].id);
+        } else {
+          setEmployees(mockEmployees.map((e) => ({ ...e, name: e.chinese_name, department: e.department || '' })));
+          if (!selectedEmployeeId && mockEmployees.length > 0) setSelectedEmployeeId(mockEmployees[0].id);
         }
       } catch {
-        // 如果表不存在，使用mock数据
         setEmployees(mockEmployees.map((e) => ({ ...e, name: e.chinese_name, department: e.department || '' })));
-        if (!selectedEmployeeId && mockEmployees.length > 0) {
-          setSelectedEmployeeId(mockEmployees[0].id);
-        }
+        if (!selectedEmployeeId && mockEmployees.length > 0) setSelectedEmployeeId(mockEmployees[0].id);
       }
       setLoading(false);
     };

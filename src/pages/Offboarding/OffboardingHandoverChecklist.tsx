@@ -120,26 +120,32 @@ const OffboardingHandoverChecklistPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
-  // 加载员工列表
+  // 加载员工列表（始终使用 mock 数据，避免 Supabase 表数据不完整导致员工缺失）
   useEffect(() => {
-    const fetchEmployees = async () => {
+    const loadEmployees = async () => {
       try {
         const { data } = await supabase
           .from('employees')
           .select('id, chinese_name, employee_no, position_name')
           .order('chinese_name');
         if (data && data.length > 0) {
-          setEmployees(data.map((e: any) => ({ ...e, department: '' })));
+          // 合并 Supabase 数据和 mock 数据（去重，优先 Supabase）
+          const supIds = new Set(data.map((e: any) => e.id));
+          const merged = [...data.map((e: any) => ({ ...e, department: '' }))];
+          mockEmployees.forEach((e) => {
+            if (!supIds.has(e.id)) {
+              merged.push({ id: e.id, chinese_name: e.chinese_name, employee_no: e.employee_no, position_name: e.position_name, department: e.department || '' });
+            }
+          });
+          setEmployees(merged);
         } else {
-          // fallback 到 mock 数据
           setEmployees(mockEmployees.map((e) => ({ id: e.id, chinese_name: e.chinese_name, employee_no: e.employee_no, position_name: e.position_name, department: e.department || '' })));
         }
       } catch {
-        // 表不存在 → 使用 mock 数据
         setEmployees(mockEmployees.map((e) => ({ id: e.id, chinese_name: e.chinese_name, employee_no: e.employee_no, position_name: e.position_name, department: e.department || '' })));
       }
     };
-    fetchEmployees();
+    loadEmployees();
   }, []);
 
   // 选中员工时加载其交接清单
