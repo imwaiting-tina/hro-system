@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>周报与下周计划 | 人事部 - 黄燕婷</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary: #003366;
+            --primary-light: #336699;
+            --accent: #4A90D9;
+            --accent-light: #E8F2FC;
+            --success: #27AE60;
+            --warning: #F39C12;
+            --danger: #E74C3C;
+            --bg: #F5F7FA;
+            --card-bg: #FFFFFF;
+            --text: #2C3E50;
+            --text-light: #7F8C8D;
+            --border: #E0E6ED;
+            --radius: 12px;
+            --shadow: 0 2px 12px rgba(0, 51, 102, 0.08);
+            --shadow-hover: 0 8px 30px rgba(0, 51, 102, 0.15);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+        }
+
+        /* ===== Header ===== */
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: #fff;
+            padding: 50px 20px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 40px;
+            background: var(--bg);
+            border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+        }
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            margin-bottom: 12px;
+        }
+        .header .subtitle {
+            font-size: 14px;
+            opacity: 0.85;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .header .subtitle span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* ===== Container ===== */
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* ===== Stats Row ===== */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        .stat-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 20px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-hover);
+        }
+        .stat-card .num {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .stat-card .label {
+            font-size: 13px;
+            color: var(--text-light);
+            margin-top: 4px;
+        }
+        .stat-card .icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        /* ===== Section ===== */
+        .section {
+            margin-bottom: 32px;
+        }
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 16px;
+            padding-left: 12px;
+            border-left: 4px solid var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-title .badge {
+            font-size: 12px;
+            background: var(--accent-light);
+            color: var(--primary-light);
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        /* ===== Card ===== */
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: var(--shadow);
+            margin-bottom: 16px;
+            transition: box-shadow 0.3s;
+        }
+        .card:hover {
+            box-shadow: var(--shadow-hover);
+        }
+        .card h3 {
+            font-size: 16px;
+            color: var(--primary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card h3 .tag {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        .tag-done { background: #E8F8EF; color: var(--success); }
+        .tag-plan { background: #FFF4E6; color: var(--warning); }
+        .tag-core { background: #FDE8E8; color: var(--danger); }
+
+        .card p {
+            font-size: 14px;
+            color: var(--text);
+            margin-bottom: 10px;
+        }
+        .card ul {
+            list-style: none;
+            padding: 0;
+        }
+        .card ul li {
+            font-size: 14px;
+            color: var(--text);
+            padding: 6px 0 6px 20px;
+            position: relative;
+        }
+        .card ul li::before {
+            content: '▸';
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+            font-size: 12px;
+        }
+
+        /* ===== Framework Grid ===== */
+        .framework-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 12px;
+        }
+        .framework-item {
+            background: var(--accent-light);
+            border-radius: 8px;
+            padding: 14px;
+            border-left: 3px solid var(--accent);
+        }
+        .framework-item .fw-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 6px;
+        }
+        .framework-item .fw-desc {
+            font-size: 12px;
+            color: var(--text-light);
+            line-height: 1.6;
+        }
+
+        /* ===== Table ===== */
+        .table-wrap {
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        thead th {
+            background: var(--primary);
+            color: #fff;
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        tbody td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        tbody tr:hover {
+            background: var(--accent-light);
+        }
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+        .status-pill {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .status-done { background: #E8F8EF; color: var(--success); font-size: 14px; padding: 4px 12px; }
+        .status-next { background: #FFF4E6; color: var(--warning); }
+        .status-link { background: #E8F2FC; color: var(--primary-light); }
+
+        /* ===== Timeline ===== */
+        .timeline {
+            position: relative;
+            padding-left: 28px;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--border);
+        }
+        .timeline-item {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -24px;
+            top: 4px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent);
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 2px var(--accent);
+        }
+        .timeline-item .tl-date {
+            font-size: 12px;
+            color: var(--text-light);
+            margin-bottom: 2px;
+        }
+        .timeline-item .tl-content {
+            font-size: 14px;
+            color: var(--text);
+        }
+
+        /* ===== Risk ===== */
+        .risk-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px dashed var(--border);
+        }
+        .risk-item:last-child { border-bottom: none; }
+        .risk-icon {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .risk-text {
+            font-size: 14px;
+            color: var(--text);
+        }
+
+        /* ===== Link card ===== */
+        .link-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--accent-light);
+            border-radius: 8px;
+            padding: 14px 18px;
+            margin-top: 8px;
+            text-decoration: none;
+            transition: transform 0.2s;
+        }
+        .link-card:hover {
+            transform: translateX(4px);
+        }
+        .link-card .link-icon {
+            font-size: 24px;
+        }
+        .link-card .link-text {
+            font-size: 14px;
+            color: var(--primary-light);
+            font-weight: 600;
+        }
+        .link-card .link-url {
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        /* ===== Footer ===== */
+        .footer {
+            text-align: center;
+            padding: 30px 20px;
+            color: var(--text-light);
+            font-size: 13px;
+        }
+        .footer .divider {
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 640px) {
+            .header h1 { font-size: 22px; }
+            .framework-grid { grid-template-columns: 1fr; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .header .subtitle { flex-direction: column; gap: 4px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== Header ===== -->
+<div class="header">
+    <h1>周报与下周计划</h1>
+    <div class="subtitle">
+        <span>👤 黄燕婷</span>
+        <span>🏢 人事部</span>
+        <span>📅 2026.06.14 - 06.18</span>
+    </div>
+</div>
+
+<div class="container">
+
+    <!-- ===== Stats ===== -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="icon">📋</div>
+            <div class="num">4</div>
+            <div class="label">产出文档</div>
+        </div>
+        <div class="stat-card">
+            <div class="icon">🔧</div>
+            <div class="num">1</div>
+            <div class="label">系统更新</div>
+        </div>
+        <div class="stat-card">
+            <div class="icon">📊</div>
+            <div class="num">18</div>
+            <div class="label">数据表格</div>
+        </div>
+        <div class="stat-card">
+            <div class="icon">🎯</div>
+            <div class="num">5</div>
+            <div class="label">下周任务</div>
+        </div>
+    </div>
+
+    <!-- ===== Section 1: Overview ===== -->
+    <div class="section">
+        <div class="section-title">
+            一、本周工作概述
+            <span class="badge">Week Summary</span>
+        </div>
+        <div class="card">
+            <p>本周围绕 <strong>HRO人事系统产品说明书</strong> 的编写与系统更新展开，重点完成了人事板块中"日常管理"和"离职管理"两个模块的流程梳理，并基于周二例会确定的大框架，完成了第一部分（招聘→入职全流程）的产品说明书初稿及补充内容清单。同时完成了HRO系统的在线更新。</p>
+        </div>
+    </div>
+
+    <!-- ===== Section 2: Completed Items ===== -->
+    <div class="section">
+        <div class="section-title">
+            二、本周完成事项
+            <span class="badge">Completed</span>
+        </div>
+
+        <!-- 2.1 Flow -->
+        <div class="card">
+            <h3>
+                📝 2.1 日常管理与离职管理流程梳理
+                <span class="tag tag-done">已完成</span>
+            </h3>
+            <p>依据公司实际运营情况，完成《日常管理&离职管理流程梳理v1》</p>
+            <ul>
+                <li><strong>日常管理-钉钉事务：</strong>考勤管理（报表导出统计、考勤组设置、班次管理、排班管理）、假期管理、审批管理（OA审批/请假流程）</li>
+                <li><strong>日常管理-发薪：</strong>工资条链接钉钉"智能工资条"板块</li>
+                <li><strong>日常管理-保险：</strong>梳理4种商业保险（员工计划、高管计划、子女计划、友邦意外险）</li>
+                <li><strong>离职管理-触发规则：</strong>正式员工提前30天、劳务/实习协议提前7天、试用期提前3天</li>
+                <li><strong>离职管理-主动离职：</strong>离职申请表（三级审批：BU负责人→人事负责人→Jenny）</li>
+                <li><strong>离职管理-被辞退：</strong>协商解除劳动合同协议（用印流程、一式两份存档）</li>
+                <li><strong>离职管理-交接清单：</strong>涵盖所接管工作、MIS、Admin、Finance、HR五大部门交接事项</li>
+            </ul>
+            <a href="https://imwaiting-tina.github.io/hro-hr/hr-flow-dashboard.html" target="_blank" class="link-card">
+                <span class="link-icon">📊</span>
+                <div>
+                    <div class="link-text">查看流程梳理看板</div>
+                    <div class="link-url">https://imwaiting-tina.github.io/hro-hr/hr-flow-dashboard.html</div>
+                </div>
+            </a>
+        </div>
+
+        <!-- 2.2 Product Spec -->
+        <div class="card">
+            <h3>
+                📘 2.2 人事系统产品说明书（第一部分）
+                <span class="tag tag-done">已完成</span>
+            </h3>
+            <p>基于周二例会确定的四大板块大框架，完成第一部分产品说明书编写</p>
+
+            <div class="framework-grid">
+                <div class="framework-item">
+                    <div class="fw-title">一、HR流程</div>
+                    <div class="fw-desc">聘用员工申请表 → 求职申请表 → 面试安排 → 员工登记表 → Offer → 新员工入职引导表 → 员工流动表 → 离职申请表+交接清单</div>
+                </div>
+                <div class="framework-item">
+                    <div class="fw-title">二、员工合同管理</div>
+                    <div class="fw-desc">合同期限、必要字段、试用期、用工类型；试用期管理流程、续签申请流程</div>
+                </div>
+                <div class="framework-item">
+                    <div class="fw-title">三、Payroll模块</div>
+                    <div class="fw-desc">每月Payroll管理、考勤、请假、社保、公积金、补充公积金、商业保险、工资单</div>
+                </div>
+                <div class="framework-item">
+                    <div class="fw-title">四、员工服务</div>
+                    <div class="fw-desc">座位、工牌、电脑、系统账户、福利政策/发放/执行/管理、HRO运动卡、人才公寓、员工查询</div>
+                </div>
+            </div>
+
+            <p style="margin-top: 16px;"><strong>本周完成的第一部分内容：</strong></p>
+            <ul>
+                <li><strong>产品说明书底稿：</strong>梳理招聘→入职全流程总流程及系统实现方式</li>
+                <li><strong>产品说明书V2.0：</strong>人事系统员工管理部分正式版，含7章内容（系统概述、招聘管理、面试安排管理、Offer管理、入职管理、入职引导与档案归档、系统角色与权限），含11张数据表格</li>
+                <li><strong>补充内容清单V1.0：</strong>逐模块梳理开发团队待补充信息（9部分+7张表），覆盖字段业务规则、状态机定义、异常场景、页面原型需求、权限矩阵、系统集成方案6个维度及优先级排序建议（P0/P1/P2）</li>
+            </ul>
+        </div>
+
+        <!-- 2.3 System Update -->
+        <div class="card">
+            <h3>
+                🚀 2.3 HRO系统在线更新
+                <span class="tag tag-done">已完成</span>
+            </h3>
+            <p>完成HRO系统在线更新</p>
+            <a href="https://imwaiting-tina.github.io/hro-system/workplace" target="_blank" class="link-card">
+                <span class="link-icon">🔗</span>
+                <div>
+                    <div class="link-text">访问HRO系统</div>
+                    <div class="link-url">https://imwaiting-tina.github.io/hro-system/workplace</div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- ===== Section 3: Output Summary ===== -->
+    <div class="section">
+        <div class="section-title">
+            三、本周工作成果汇总
+            <span class="badge">Deliverables</span>
+        </div>
+        <div class="card" style="padding: 0; overflow: hidden;">
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">序号</th>
+                            <th>工作事项</th>
+                            <th>产出物</th>
+                            <th style="width: 70px;">状态</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>日常管理与离职管理流程梳理</td>
+                            <td>《日常管理&离职管理流程梳理v1》<br><a href="https://imwaiting-tina.github.io/hro-hr/hr-flow-dashboard.html" target="_blank" style="color: var(--primary-light); font-size: 12px;">📊 流程梳理看板</a></td>
+                            <td><span class="status-pill status-done">✓</span></td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>人事系统产品说明书员工管理部分底稿编写</td>
+                            <td>《人事系统产品说明书底稿》</td>
+                            <td><span class="status-pill status-done">✓</span></td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>人事系统产品说明书员工管理部分</td>
+                            <td>《人事系统产品说明书 V2.0》<br><span style="font-size:12px;color:var(--text-light);">(7章+11张表)</span></td>
+                            <td><span class="status-pill status-done">✓</span></td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td>产品说明书补充内容梳理</td>
+                            <td>《人事系统产品说明书_补充内容<br><span style="font-size:12px;color:var(--text-light);">清单 V1.0》(9部分+7张表)</span></td>
+                            <td><span class="status-pill status-done">✓</span></td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td>HRO系统在线更新</td>
+                            <td><a href="https://imwaiting-tina.github.io/hro-system/workplace" target="_blank" style="color: var(--primary-light);">imwaiting-tina.github.io/hro-system</a></td>
+                            <td><span class="status-pill status-done">✓</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Section 4: Next Week Plan ===== -->
+    <div class="section">
+        <div class="section-title">
+            四、下周工作计划
+            <span class="badge">Next Week</span>
+        </div>
+        <div class="card">
+            <p style="background: #FFF4E6; padding: 12px 16px; border-radius: 8px; border-left: 3px solid var(--warning);">
+                <strong>🎯 核心目标：</strong>根据老板周二发布的具体板块要求，完成更新和补充，产出完整的产品说明书，并与陈圆对接，推动技术部启动系统建设。
+            </p>
+        </div>
+        <div class="card" style="padding: 0; overflow: hidden;">
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">序号</th>
+                            <th>计划事项</th>
+                            <th>预期产出</th>
+                            <th style="width: 80px;">备注</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>根据老板周二发布的板块要求，更新和补充产品说明书</td>
+                            <td>产品说明书更新版</td>
+                            <td><span class="status-pill status-next">核心任务</span></td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>完成完整产品说明书（第三部分Payroll仅做大框架）</td>
+                            <td>《产品说明书V3.0》</td>
+                            <td>含四大板块</td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>与陈圆对接产品说明书</td>
+                            <td>对接确认记录</td>
+                            <td>需求对齐</td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td>技术部启动系统建设</td>
+                            <td>开发启动</td>
+                            <td>确认后推进</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Section 5: Risk (Removed) ===== -->
+
+</div>
+
+<!-- ===== Footer ===== -->
+<div class="footer">
+    <div class="divider">——— ✦ ———</div>
+    <p>2026年6月</p>
+</div>
+
+</body>
+</html>
