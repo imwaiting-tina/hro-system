@@ -13,6 +13,7 @@ import supabase from '../../utils/supabase';
 import type { OffboardingCase, OffboardingCaseStatus, OffboardingInitiatorType, OffboardingType } from '../../types';
 import dayjs from 'dayjs';
 import { useOffboardingContext } from './index';
+import { mockOffboardingCases } from '../../data/mockOffboarding';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -79,50 +80,54 @@ const OffboardingListPage: React.FC = () => {
         .select('*')
         .order('submitted_at', { ascending: false });
 
+      let rawData: any[] = [];
+
       if (!error && result && result.length > 0) {
-        // 批量获取员工信息
-        const empIds = [...new Set(result.map((r) => r.employee_id))];
-        const { data: empData } = await supabase
-          .from('employees')
-          .select('id, chinese_name, employee_no, position_name')
-          .in('id', empIds);
-
-        const empMap = new Map(empData?.map((e: any) => [e.id, e]) || []);
-
-        let filtered = result.map((r: any) => {
-          const emp = empMap.get(r.employee_id);
-          return {
-            ...r,
-            employee_name: emp?.chinese_name || '',
-            employee_department: '',
-            employee_position: emp?.position_name || '',
-            employee_no: emp?.employee_no || '',
-            approver_name: '',
-          };
-        });
-
-        // 前端筛选
-        if (filterStatus) filtered = filtered.filter((r: OffboardingCase) => r.status === filterStatus);
-        if (filterType) filtered = filtered.filter((r: OffboardingCase) => r.type === filterType);
-        if (filterDept) filtered = filtered.filter((r: OffboardingCase) => r.employee_department === filterDept);
-        if (searchText) {
-          filtered = filtered.filter((r: OffboardingCase) =>
-            r.employee_name?.toLowerCase().includes(searchText.toLowerCase()) ||
-            r.reason_detail?.toLowerCase().includes(searchText.toLowerCase())
-          );
-        }
-
-        setData(filtered);
-        setStats({
-          total: filtered.length,
-          pending: filtered.filter((r: OffboardingCase) => r.status === 'pending').length,
-          handovering: filtered.filter((r: OffboardingCase) => r.status === 'handovering').length,
-          closed: filtered.filter((r: OffboardingCase) => r.status === 'closed').length,
-        });
+        rawData = result;
       } else {
-        // 表不存在时使用空数据
-        setData([]);
+        // Supabase 表不存在或为空 → 使用 mock 数据
+        rawData = mockOffboardingCases;
       }
+
+      // 批量获取员工信息
+      const empIds = [...new Set(rawData.map((r) => r.employee_id))];
+      const { data: empData } = await supabase
+        .from('employees')
+        .select('id, chinese_name, employee_no, position_name')
+        .in('id', empIds);
+
+      const empMap = new Map(empData?.map((e: any) => [e.id, e]) || []);
+
+      let filtered = rawData.map((r: any) => {
+        const emp = empMap.get(r.employee_id);
+        return {
+          ...r,
+          employee_name: emp?.chinese_name || r.employee_name || '',
+          employee_department: r.employee_department || '',
+          employee_position: emp?.position_name || r.employee_position || '',
+          employee_no: emp?.employee_no || r.employee_no || '',
+          approver_name: r.approver_name || '',
+        };
+      });
+
+      // 前端筛选
+      if (filterStatus) filtered = filtered.filter((r: OffboardingCase) => r.status === filterStatus);
+      if (filterType) filtered = filtered.filter((r: OffboardingCase) => r.type === filterType);
+      if (filterDept) filtered = filtered.filter((r: OffboardingCase) => r.employee_department === filterDept);
+      if (searchText) {
+        filtered = filtered.filter((r: OffboardingCase) =>
+          r.employee_name?.toLowerCase().includes(searchText.toLowerCase()) ||
+          r.reason_detail?.toLowerCase().includes(searchText.toLowerCase())
+        );
+      }
+
+      setData(filtered);
+      setStats({
+        total: filtered.length,
+        pending: filtered.filter((r: OffboardingCase) => r.status === 'pending').length,
+        handovering: filtered.filter((r: OffboardingCase) => r.status === 'handovering').length,
+        closed: filtered.filter((r: OffboardingCase) => r.status === 'closed').length,
+      });
     } catch {
       setData([]);
     }

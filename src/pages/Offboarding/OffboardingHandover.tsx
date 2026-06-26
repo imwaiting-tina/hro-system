@@ -12,6 +12,7 @@ import { useAuthStore, canEdit } from '../../stores/authStore';
 import supabase from '../../utils/supabase';
 import type { OffboardingCase, OffboardingHandoverItem, HandoverItemStatus } from '../../types';
 import dayjs from 'dayjs';
+import { mockOffboardingCases, mockHandoverItems } from '../../data/mockOffboarding';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -56,6 +57,10 @@ const OffboardingHandoverPage: React.FC = () => {
           employee_position: empData?.position_name || '',
           employee_no: empData?.employee_no || '',
         });
+      } else {
+        // fallback 到 mock 数据
+        const mockCase = mockOffboardingCases.find((c) => c.id === id);
+        if (mockCase) setCaseData(mockCase);
       }
 
       // 加载交接项
@@ -65,11 +70,19 @@ const OffboardingHandoverPage: React.FC = () => {
         .eq('case_id', id)
         .order('sort_order');
 
-      if (itemResult) {
+      if (itemResult && itemResult.length > 0) {
         setItems(itemResult);
+      } else {
+        // fallback 到 mock
+        const mockItems = mockHandoverItems[id];
+        if (mockItems) setItems(mockItems);
       }
     } catch {
-      // ignore
+      // 完全 fallback
+      const mockCase = mockOffboardingCases.find((c) => c.id === id);
+      if (mockCase) setCaseData(mockCase);
+      const mockItems = mockHandoverItems[id];
+      if (mockItems) setItems(mockItems);
     }
     setLoading(false);
   };

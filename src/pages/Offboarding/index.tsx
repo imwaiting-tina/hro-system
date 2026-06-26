@@ -5,6 +5,7 @@ import { UserOutlined } from '@ant-design/icons';
 import { useAuthStore, canEdit } from '../../stores/authStore';
 import OffboardingNav from '../../components/OffboardingNav';
 import supabase from '../../utils/supabase';
+import { mockEmployees } from '../../data/mockOffboarding';
 
 const { Title, Text } = Typography;
 
@@ -55,7 +56,10 @@ const OffboardingPage: React.FC = () => {
         }
       } catch {
         // 如果表不存在，使用mock数据
-        setEmployees([]);
+        setEmployees(mockEmployees.map((e) => ({ ...e, name: e.chinese_name, department: e.department || '' })));
+        if (!selectedEmployeeId && mockEmployees.length > 0) {
+          setSelectedEmployeeId(mockEmployees[0].id);
+        }
       }
       setLoading(false);
     };

@@ -11,6 +11,7 @@ import {
 import { useAuthStore, canEdit } from '../../stores/authStore';
 import supabase from '../../utils/supabase';
 import dayjs from 'dayjs';
+import { mockEmployees, mockChecklistItems } from '../../data/mockOffboarding';
 
 const { Title, Text } = Typography;
 
@@ -127,8 +128,16 @@ const OffboardingHandoverChecklistPage: React.FC = () => {
           .from('employees')
           .select('id, chinese_name, employee_no, position_name')
           .order('chinese_name');
-        if (data) setEmployees(data.map((e: any) => ({ ...e, department: '' })));
-      } catch { /* ignore */ }
+        if (data && data.length > 0) {
+          setEmployees(data.map((e: any) => ({ ...e, department: '' })));
+        } else {
+          // fallback 到 mock 数据
+          setEmployees(mockEmployees.map((e) => ({ id: e.id, chinese_name: e.chinese_name, employee_no: e.employee_no, position_name: e.position_name, department: e.department || '' })));
+        }
+      } catch {
+        // 表不存在 → 使用 mock 数据
+        setEmployees(mockEmployees.map((e) => ({ id: e.id, chinese_name: e.chinese_name, employee_no: e.employee_no, position_name: e.position_name, department: e.department || '' })));
+      }
     };
     fetchEmployees();
   }, []);
@@ -143,7 +152,13 @@ const OffboardingHandoverChecklistPage: React.FC = () => {
         .select('id, chinese_name, employee_no, position_name')
         .eq('id', employeeId)
         .single();
-      if (emp) setSelectedEmployee(emp as Employee);
+      if (emp) {
+        setSelectedEmployee(emp as Employee);
+      } else {
+        // fallback 到 mock
+        const mockEmp = mockEmployees.find((e) => e.id === employeeId);
+        if (mockEmp) setSelectedEmployee(mockEmp as Employee);
+      }
 
       // 获取交接清单项
       const { data: items } = await supabase
@@ -156,14 +171,28 @@ const OffboardingHandoverChecklistPage: React.FC = () => {
       if (items && items.length > 0) {
         setChecklistItems(items as ChecklistItem[]);
       } else {
-        // 初始化：创建默认清单项
+        // 尝试从 mock 数据加载
+        const mockItems = mockChecklistItems.filter((it) => it.employee_id === employeeId);
+        if (mockItems.length > 0) {
+          setChecklistItems(mockItems as ChecklistItem[]);
+        } else {
+          // 初始化：创建默认清单项
+          setChecklistItems([]);
+          await initChecklist(employeeId);
+        }
+      }
+    } catch {
+      // 查询失败 → 尝试 mock 数据
+      const mockEmp = mockEmployees.find((e) => e.id === employeeId);
+      if (mockEmp) setSelectedEmployee(mockEmp as Employee);
+
+      const mockItems = mockChecklistItems.filter((it) => it.employee_id === employeeId);
+      if (mockItems.length > 0) {
+        setChecklistItems(mockItems as ChecklistItem[]);
+      } else {
         setChecklistItems([]);
         await initChecklist(employeeId);
       }
-    } catch {
-      // 初始化本地清单
-      setChecklistItems([]);
-      await initChecklist(employeeId);
     }
     setLoading(false);
   }, []);

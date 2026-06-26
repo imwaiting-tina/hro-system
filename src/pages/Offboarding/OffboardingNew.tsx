@@ -6,6 +6,7 @@ import { SendOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../stores/authStore';
 import supabase from '../../utils/supabase';
 import dayjs from 'dayjs';
+import { mockEmployees } from '../../data/mockOffboarding';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -64,7 +65,11 @@ const OffboardingNewPage: React.FC = () => {
           }
         }
       } catch {
-        // 表不存在时忽略
+        // 表不存在 → 使用 mock 数据匹配
+        const mockEmp = mockEmployees.find((e) => e.email === user.email);
+        if (mockEmp) {
+          setMyEmployeeId(mockEmp.id);
+        }
       }
       setLoading(false);
     };
