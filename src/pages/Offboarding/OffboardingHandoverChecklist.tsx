@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-  Card, Typography, Select, Space, Tag, Button, Modal, Form, Input,
-  Descriptions, message, Spin, Empty, Checkbox, Row, Col, Divider, Badge, Tooltip
+  Card, Typography, Select, Space, Tag, Button, Modal, Descriptions,
+  message, Spin, Empty, Row, Col, Divider, Badge, Tooltip
 } from 'antd';
 import {
   UserOutlined, CheckCircleOutlined, ClockCircleOutlined,
@@ -12,8 +12,7 @@ import { useAuthStore, canEdit } from '../../stores/authStore';
 import supabase from '../../utils/supabase';
 import dayjs from 'dayjs';
 
-const { Title, Text, Paragraph } = Typography;
-const { TextArea } = Input;
+const { Title, Text } = Typography;
 
 // ============================================================
 // 类型定义
@@ -118,9 +117,6 @@ const OffboardingHandoverChecklistPage: React.FC = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
-  const [confirmingItem, setConfirmingItem] = useState<ChecklistItem | null>(null);
-  const [confirmForm] = Form.useForm();
   const [syncing, setSyncing] = useState(false);
 
   // 加载员工列表
@@ -253,47 +249,30 @@ const OffboardingHandoverChecklistPage: React.FC = () => {
     setSyncing(false);
   };
 
-  // 确认交接项
-  const handleConfirmItem = (item: ChecklistItem) => {
-    setConfirmingItem(item);
-    confirmForm.resetFields();
-    setConfirmModalVisible(true);
-  };
-
-  const submitConfirm = async (values: { note?: string }) => {
-    if (!confirmingItem) return;
+  // 确认交接项（直接确认，无需弹窗）
+  const handleConfirmItem = async (item: ChecklistItem) => {
     const now = new Date().toISOString();
     const updateData = {
       status: 'confirmed' as const,
       confirmed_by: user?.id || null,
       confirmed_by_name: user?.display_name || user?.username || '',
       confirmed_at: now,
-      note: values.note || null,
+      note: null,
     };
 
     try {
       await supabase
         .from('offboarding_handover_checklist')
         .update(updateData)
-        .eq('id', confirmingItem.id);
+        .eq('id', item.id);
+    } catch { /* ignore */ }
 
-      setChecklistItems((prev) =>
-        prev.map((it) =>
-          it.id === confirmingItem.id ? { ...it, ...updateData } : it
-        )
-      );
-      message.success('交接项已确认');
-    } catch {
-      // 本地更新
-      setChecklistItems((prev) =>
-        prev.map((it) =>
-          it.id === confirmingItem.id ? { ...it, ...updateData } : it
-        )
-      );
-      message.success('交接项已确认');
-    }
-    setConfirmModalVisible(false);
-    setConfirmingItem(null);
+    setChecklistItems((prev) =>
+      prev.map((it) =>
+        it.id === item.id ? { ...it, ...updateData } : it
+      )
+    );
+    message.success('交接项已确认');
   };
 
   // 撤销确认
@@ -514,14 +493,6 @@ const OffboardingHandoverChecklistPage: React.FC = () => {
                                   {item.confirmed_at && ` · ${dayjs(item.confirmed_at).format('MM-DD HH:mm')}`}
                                 </div>
                               )}
-                              {isConfirmed && item.note && (
-                                <div style={{
-                                  fontSize: 12, color: '#bfbfbf',
-                                  marginTop: 2, fontStyle: 'italic',
-                                }}>
-                                  备注：{item.note}
-                                </div>
-                              )}
                             </div>
 
                             {/* 操作按钮 */}
@@ -553,7 +524,7 @@ const OffboardingHandoverChecklistPage: React.FC = () => {
                         );
                       })}
 
-                      {/* 交接情况及签名 */}
+                      {/* 部门状态 */}
                       <div style={{
                         marginTop: 12,
                         padding: '8px 10px',
@@ -562,16 +533,11 @@ const OffboardingHandoverChecklistPage: React.FC = () => {
                         fontSize: 12,
                         color: '#8c8c8c',
                       }}>
-                        <Space>
-                          {deptDone ? (
-                            <Badge status="success" text="全部确认完成" />
-                          ) : (
-                            <Badge status="processing" text={`还有 ${deptTotal - deptConfirmed} 项待确认`} />
-                          )}
-                        </Space>
-                        <div style={{ marginTop: 4 }}>
-                          交接情况及签名：_______________
-                        </div>
+                        {deptDone ? (
+                          <Badge status="success" text="全部确认完成" />
+                        ) : (
+                          <Badge status="processing" text={`还有 ${deptTotal - deptConfirmed} 项待确认`} />
+                        )}
                       </div>
                     </Card>
                   </Col>
@@ -583,35 +549,6 @@ const OffboardingHandoverChecklistPage: React.FC = () => {
       )}
 
       {/* 确认弹窗 */}
-      <Modal
-        title="确认交接项"
-        open={confirmModalVisible}
-        onCancel={() => { setConfirmModalVisible(false); setConfirmingItem(null); }}
-        onOk={() => confirmForm.submit()}
-        okText="确认完成"
-      >
-        {confirmingItem && (
-          <div style={{ marginBottom: 16 }}>
-            <div style={{
-              padding: '8px 12px',
-              background: '#fafafa',
-              borderRadius: 4,
-              marginBottom: 12,
-              fontSize: 14,
-            }}>
-              {confirmingItem.description}
-            </div>
-            <Text type="secondary">
-              确认人：{user?.display_name || user?.username}
-            </Text>
-          </div>
-        )}
-        <Form form={confirmForm} layout="vertical" onFinish={submitConfirm}>
-          <Form.Item name="note" label="备注（可选）">
-            <TextArea rows={2} placeholder="补充说明..." />
-          </Form.Item>
-        </Form>
-      </Modal>
     </div>
   );
 };
